@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const dotenv = require('dotenv');
+
 dotenv.config();
 
 // Route imports
@@ -22,9 +24,14 @@ app.use('/api/user', userRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 
 // Optional error handling
 app.use((req, res) => res.status(404).json({ error: 'Not Found' }));
 app.use((err, req, res, next) => res.status(500).json({ error: 'Server Error' }));
-
+app.use(cors({
+    origin: 'http://localhost:5173',
+    credentials: true
+  }));
 module.exports = app;

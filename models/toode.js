@@ -10,7 +10,8 @@ module.exports = (sequelize, DataTypes) => {
     Kategooria: DataTypes.STRING,
     Hind: DataTypes.DECIMAL,
     Kogus: DataTypes.INTEGER,
-    Asukoht: DataTypes.STRING
+    Asukoht: DataTypes.STRING,
+    Pilt: DataTypes.STRING
   }, 
   {
     tableName: 'toode',

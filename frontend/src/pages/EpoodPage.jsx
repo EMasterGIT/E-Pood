@@ -112,7 +112,7 @@ const EpoodPage = () => {
           <div className="row align-items-center">
             {/* Logo */}
             <div className="col-md-2">
-              <h2 className="text-danger fw-bold mb-0">E-POOD</h2>
+              <h2 className="text-danger fw-bold mb-0">E-RIMI</h2>
             </div>
 
             {/* Search */}
@@ -277,12 +277,25 @@ const EpoodPage = () => {
                       />
                     </button>
 
-                    {/* Product Image Placeholder */}
+                    {/* Product Image */}
                     <div 
-                      className="card-img-top d-flex align-items-center justify-content-center bg-light"
-                      style={{ height: '200px' }}
+                      className="d-flex justify-content-center align-items-center bg-light"
+                    
                     >
-                      <span className="text-muted fs-1">📦</span>
+                      {/* Product Image */}
+                      <img
+                          src={
+                            product.Pilt
+                              ? `http://localhost:3001/${product.Pilt}`
+                              : '/uploads/placeholder.jpg' // asepilt
+                          }
+                          alt={product.Nimetus}
+                          className="d-flex justify-content-center align-items-center bg-light"
+                          style={{ height: '200px', objectFit: 'contain' }}
+                        />
+
+
+
                     </div>
                     
                     <div className="card-body d-flex flex-column">
@@ -327,7 +340,7 @@ const EpoodPage = () => {
         <div className="container">
           <div className="row">
             <div className="col-md-3">
-              <h5 className="text-danger">E-POOD</h5>
+              <h5 className="text-danger">E-RIMI</h5>
               <p className="text-muted">Teie usaldusväärne toidupood internetis</p>
             </div>
             <div className="col-md-3">
@@ -348,9 +361,9 @@ const EpoodPage = () => {
             </div>
             <div className="col-md-3">
               <h6>Kontakt</h6>
-              <p className="text-muted mb-1">📞 +372 1234 5678</p>
-              <p className="text-muted mb-1">✉️ info@epood.ee</p>
-              <p className="text-muted">⏰ 24/7 avatud</p>
+              <p className="text-light mb-1">📞 +372 1234 5678</p>
+              <p className="text-light mb-1">✉️ info@erimi.ee</p>
+              <p className="text-light">⏰ 24/7 avatud</p>
             </div>
           </div>
           <hr className="my-4" />

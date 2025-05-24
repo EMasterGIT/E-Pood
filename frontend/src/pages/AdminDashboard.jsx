@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 
 function AdminDashboard() {
-  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [newProduct, setNewProduct] = useState({
     Nimetus: '',
@@ -12,78 +10,141 @@ function AdminDashboard() {
     Kogus: '',
     Asukoht: ''
   });
+  const [newProductImage, setNewProductImage] = useState(null);
   const [editingProductId, setEditingProductId] = useState(null);
   const [editedProduct, setEditedProduct] = useState({});
+  const [editProductImage, setEditProductImage] = useState(null);
   const [error, setError] = useState('');
-  
+  const [imagePreview, setImagePreview] = useState(null);
+  const [editImagePreview, setEditImagePreview] = useState(null);
+  const navigate = useNavigate();
+
   const token = localStorage.getItem('token');
 
   useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const res = await fetch('http://localhost:3001/api/products');
+        const data = await res.json();
+        if (!res.ok) {
+          setError(data.error || 'Failed to load products');
+          return;
+        }
+        setProducts(data);
+      } catch (err) {
+        setError('Server error - please try again later');
+      }
+    };
     fetchProducts();
   }, []);
 
-  const fetchProducts = async () => {
-    try {
-      const res = await axios.get('http://localhost:3001/api/products', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setProducts(res.data);
-    } catch (err) {
-      console.error('Failed to fetch products', err);
-      setError('Failed to fetch products');
-    }
+  const handleImageChange = (e, isEdit = false) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+
+    reader.onloadend = () => {
+      if (isEdit) {
+        setEditProductImage(file);
+        setEditImagePreview(reader.result);
+      } else {
+        setNewProductImage(file);
+        setImagePreview(reader.result);
+      }
+    };
+
+    reader.readAsDataURL(file);
   };
 
   const handleAddProduct = async (e) => {
     e.preventDefault();
+    const formData = new FormData();
+    Object.entries(newProduct).forEach(([key, value]) => formData.append(key, value));
+    if (newProductImage) formData.append('image', newProductImage);
+
     try {
-      await axios.post('http://localhost:3001/api/products', newProduct, {
-        headers: { Authorization: `Bearer ${token}` }
+      const res = await fetch('http://localhost:3001/api/products', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+        body: formData
       });
-      fetchProducts();
+
+      const data = await res.json();
+      if (!res.ok) return setError(data.error || 'Failed to add product');
+
+      setProducts([...products, data]);
       setNewProduct({ Nimetus: '', Kategooria: '', Hind: '', Kogus: '', Asukoht: '' });
-    } catch (err) {
-      console.error('Error adding product:', err);
-      setError('Error adding product');
+      setNewProductImage(null);
+      setImagePreview(null);
+    } catch (error) {
+      setError('Server error - please try again later');
     }
   };
 
   const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this product?')) return;
+
     try {
-      await axios.delete(`http://localhost:3001/api/products/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
+      const res = await fetch(`http://localhost:3001/api/products/${id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
       });
-      fetchProducts();
-    } catch (err) {
-      console.error('Error deleting product:', err);
-      setError('Error deleting product');
+
+      const data = await res.json();
+      if (!res.ok) return setError(data.error || 'Failed to delete product');
+
+      setProducts(products.filter(p => p.ToodeID !== id));
+    } catch (error) {
+      setError('Server error - please try again later');
     }
   };
 
   const handleEditClick = (product) => {
     setEditingProductId(product.ToodeID);
     setEditedProduct(product);
+    setEditProductImage(null);
+    setEditImagePreview(null);
   };
 
   const handleSaveClick = async () => {
+    const formData = new FormData();
+    Object.entries(editedProduct).forEach(([key, value]) => formData.append(key, value));
+    if (editProductImage) formData.append('image', editProductImage);
+
     try {
-      await axios.put(`http://localhost:3001/api/products/${editingProductId}`, editedProduct, {
-        headers: { Authorization: `Bearer ${token}` }
+      const res = await fetch(`http://localhost:3001/api/products/${editingProductId}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+        body: formData
       });
+
+      const data = await res.json();
+      if (!res.ok) return setError(data.error || 'Failed to update product');
+
+      setProducts(products.map(p => p.ToodeID === editingProductId ? data : p));
       setEditingProductId(null);
       setEditedProduct({});
-      fetchProducts();
+      setEditProductImage(null);
+      setEditImagePreview(null);
     } catch (err) {
-      console.error('Error updating product:', err);
-      setError('Error updating product');
+      setError('Server error - please try again later');
     }
   };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
-    localStorage.removeItem('role');
     navigate('/admin');
   };
+
+  const getImageUrl = (imagePath) => imagePath ? `http://localhost:3001/${imagePath}` : null;
+
+
 
   return (
     <div className="container mt-4">
@@ -95,7 +156,7 @@ function AdminDashboard() {
               className="btn btn-outline-danger"
               onClick={handleLogout}
             >
-              <i className="bi bi-box-arrow-right me-2"></i>
+              <span className="me-2">🔓</span>
               Logout
             </button>
           </div>
@@ -119,6 +180,7 @@ function AdminDashboard() {
                   <table className="table table-striped table-hover">
                     <thead className="table-dark">
                       <tr>
+                        <th>Image</th>
                         <th>Nimetus</th>
                         <th>Kategooria</th>
                         <th>Hind</th>
@@ -132,6 +194,44 @@ function AdminDashboard() {
                         <tr key={product.ToodeID}>
                           {editingProductId === product.ToodeID ? (
                             <>
+                              <td>
+                                <div className="d-flex flex-column align-items-center">
+                                  {editImagePreview ? (
+                                    <img 
+                                      src={editImagePreview} 
+                                      alt="Preview" 
+                                      className="img-thumbnail mb-2"
+                                      style={{width: '60px', height: '60px', objectFit: 'cover'}}
+                                    />
+                                  ) : product.Pilt ? (
+                                    <img 
+                                      src={getImageUrl(product.Pilt)} 
+                                      alt={product.Nimetus}
+                                      className="img-thumbnail mb-2"
+                                      style={{width: '60px', height: '60px', objectFit: 'cover'}}
+                                      onError={(e) => {
+                                        e.target.style.display = 'none';
+                                        e.target.nextSibling.style.display = 'flex';
+                                      }}
+                                    />
+                                  ) : null}
+                                  <div className="bg-light d-flex align-items-center justify-content-center mb-2" 
+                                       style={{
+                                         width: '60px', 
+                                         height: '60px',
+                                         display: product.Pilt && !editImagePreview ? 'none' : 'flex'
+                                       }}>
+                                    📦
+                                  </div>
+                                  <input
+                                    type="file"
+                                    className="form-control form-control-sm"
+                                    accept="image/*"
+                                    onChange={(e) => handleImageChange(e, true)}
+                                    style={{fontSize: '0.75rem'}}
+                                  />
+                                </div>
+                              </td>
                               <td>
                                 <input
                                   type="text"
@@ -183,7 +283,11 @@ function AdminDashboard() {
                                   </button>
                                   <button 
                                     className="btn btn-secondary"
-                                    onClick={() => setEditingProductId(null)}
+                                    onClick={() => {
+                                      setEditingProductId(null);
+                                      setEditImagePreview(null);
+                                      setEditProductImage(null);
+                                    }}
                                   >
                                     Cancel
                                   </button>
@@ -192,6 +296,28 @@ function AdminDashboard() {
                             </>
                           ) : (
                             <>
+                              <td>
+                                {product.Pilt ? (
+                                  <img 
+                                    src={getImageUrl(product.Pilt)} 
+                                    alt={product.Nimetus}
+                                    className="img-thumbnail"
+                                    style={{width: '60px', height: '60px', objectFit: 'cover'}}
+                                    onError={(e) => {
+                                      e.target.style.display = 'none';
+                                      e.target.nextSibling.style.display = 'flex';
+                                    }}
+                                  />
+                                ) : null}
+                                <div className="bg-light d-flex align-items-center justify-content-center" 
+                                     style={{
+                                       width: '60px', 
+                                       height: '60px',
+                                       display: product.Pilt ? 'none' : 'flex'
+                                     }}>
+                                  📦
+                                </div>
+                              </td>
                               <td><strong>{product.Nimetus}</strong></td>
                               <td><span className="badge bg-info">{product.Kategooria}</span></td>
                               <td><span className="text-success fw-bold">{product.Hind}€</span></td>
@@ -230,8 +356,28 @@ function AdminDashboard() {
               <h3 className="card-title mb-0">Add New Product</h3>
             </div>
             <div className="card-body">
-              <form onSubmit={handleAddProduct}>
+              <div>
                 <div className="row g-3">
+                  <div className="col-md-12">
+                    <label htmlFor="productImage" className="form-label">Product Image</label>
+                    <input
+                      type="file"
+                      className="form-control"
+                      id="productImage"
+                      accept="image/*"
+                      onChange={(e) => handleImageChange(e, false)}
+                    />
+                    {imagePreview && (
+                      <div className="mt-2">
+                        <img 
+                          src={imagePreview} 
+                          alt="Preview" 
+                          className="img-thumbnail"
+                          style={{maxWidth: '200px', maxHeight: '200px', objectFit: 'cover'}}
+                        />
+                      </div>
+                    )}
+                  </div>
                   <div className="col-md-6">
                     <label htmlFor="nimetus" className="form-label">Nimetus</label>
                     <input
@@ -293,14 +439,13 @@ function AdminDashboard() {
                       required
                     />
                   </div>
+                  <form onSubmit={handleAddProduct}>
                   <div className="col-12">
-                    <button type="submit" className="btn btn-primary btn-lg">
-                      <i className="bi bi-plus-circle me-2"></i>
-                      Add Product
-                    </button>
+                    <button type="submit" className="btn btn-primary">➕Add Product</button>
                   </div>
+                  </form>
                 </div>
-              </form>
+              </div>
             </div>
           </div>
         </div>
