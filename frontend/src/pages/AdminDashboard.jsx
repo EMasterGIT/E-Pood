@@ -152,13 +152,7 @@ function AdminDashboard() {
         <div className="col-12">
           <div className="d-flex justify-content-between align-items-center mb-4">
             <h1 className="mb-0">Product Management Dashboard</h1>
-            <button 
-              className="btn btn-outline-danger"
-              onClick={handleLogout}
-            >
-              <span className="me-2">🔓</span>
-              Logout
-            </button>
+        
           </div>
           
           {error && (

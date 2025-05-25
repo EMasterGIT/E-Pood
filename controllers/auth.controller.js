@@ -24,6 +24,7 @@ exports.register = async (req, res) => {
       message: 'User registered',
       user: {
         id: user.KasutajaID,
+        name: user.Nimi,
         email: user.Email,
         roll: user.Roll
       }
@@ -58,7 +59,17 @@ exports.login = async (req, res) => {
       { expiresIn: '1h' }
     );
 
-    return res.json({ message: 'Login successful', token, user: { id: user.KasutajaID, roll: user.Roll } });
+    // --- CRITICAL FIX HERE: Include Email and Nimi in the user object ---
+    return res.json({
+      message: 'Login successful',
+      token,
+      user: {
+        id: user.KasutajaID,
+        email: user.Email, 
+        name: user.Nimi,  
+        role: user.Roll
+      }
+    });
 
   } catch (error) {
     console.error(error);

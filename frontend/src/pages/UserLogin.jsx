@@ -1,25 +1,22 @@
-// AdminLogin.jsx
+// UserLogin.jsx
 import { useState, useEffect } from 'react';
+import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
-// Accept setUser as a prop
-function Login({ setUser }) {
-  const navigate = useNavigate();
-
-  const [emailOrName, setEmailOrName] = useState('');
+export default function UserLogin({ setUser }) {
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
-  // This useEffect can stay, it handles cases where the user is *already* logged in as admin on initial component load.
   useEffect(() => {
-    const token = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
-    if (token && storedUser) {
+    if (storedUser) {
       try {
         const user = JSON.parse(storedUser);
-        if (user.role === 'admin') {
-          navigate('/dashboard');
+        if (user) {
+          navigate('/store');
         }
       } catch (e) {
         console.error("Failed to parse user from localStorage:", e);
@@ -31,53 +28,39 @@ function Login({ setUser }) {
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    console.log('handleLogin called!');
+
     setIsLoading(true);
     setError('');
 
     try {
-      const res = await fetch('http://localhost:3001/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          EmailOrName: emailOrName,
-          Parool: password
-        })
+      const response = await axios.post('http://localhost:3001/api/auth/login', {
+        EmailOrName: email,
+        Parool: password
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || 'Login failed');
-        return;
-      }
+      const { token, user: userData } = response.data;
 
       const loggedInUser = {
-        id: data.user.id,
-        name: data.user.name, 
-        email: data.user.email, 
-        role: data.user.role
+        id: userData.id,
+        email: userData.email || userData.Email,
+        name: userData.name || userData.Nimi,
+        role: userData.roll || 'user'
       };
 
-      // Store in localStorage
-      localStorage.setItem('token', data.token);
+      localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(loggedInUser));
 
-      // **THE FINAL FIX HERE:**
-      // Update the global user state in App.jsx directly
-      setUser(loggedInUser); // <--- Call the prop function to update App.jsx's state
-
-      if (loggedInUser.role === 'admin') {
-        navigate('/dashboard');
-      } else {
-        setError('Access denied: this login is for administrators only.');
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        setUser(null); // Clear App.jsx state if login is not admin
-      }
+      setUser(loggedInUser);
+      navigate('/store');
 
     } catch (err) {
-      console.error('Login request failed or parse error:', err);
-      setError('Server error - please try again later');
+      console.error('User login failed:', err);
+      if (err.response && err.response.data && err.response.data.error) {
+        setError(err.response.data.error);
+      } else {
+        setError('Login failed. Please check your credentials or try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -90,19 +73,13 @@ function Login({ setUser }) {
           <div className="col-md-6 col-lg-4">
             <div className="card shadow-lg border-0">
               <div className="card-body p-5">
-                {/* Header */}
                 <div className="text-center mb-4">
-                  <div className="mb-3">
-                    <i className="bi bi-shield-lock text-primary" style={{ fontSize: '3rem' }}></i>
-                  </div>
-                  <h2 className="card-title text-center mb-2">Admin Login</h2>
-                  <p className="text-muted">Sign in to access the admin dashboard</p>
+                  <h2 className="card-title text-center mb-2">User Login</h2>
+                  <p className="text-muted">Sign in to your account</p>
                 </div>
 
-                {/* Error Alert */}
                 {error && (
                   <div className="alert alert-danger alert-dismissible fade show" role="alert">
-                    <i className="bi bi-exclamation-triangle-fill me-2"></i>
                     {error}
                     <button
                       type="button"
@@ -113,34 +90,26 @@ function Login({ setUser }) {
                   </div>
                 )}
 
-                {/* Login Form */}
                 <form onSubmit={handleLogin}>
                   <div className="mb-3">
-                    <label htmlFor="emailOrName" className="form-label">
-                      <i className="bi bi-person-fill me-2"></i>
-                      Email or Username
-                    </label>
+                    <label htmlFor="emailInput" className="form-label">Email or Username</label>
                     <input
                       type="text"
                       className="form-control form-control-lg"
-                      id="emailOrName"
+                      id="emailInput"
                       placeholder="Enter your email or username"
-                      value={emailOrName}
-                      onChange={(e) => setEmailOrName(e.target.value)}
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       required
                       disabled={isLoading}
                     />
                   </div>
-
                   <div className="mb-4">
-                    <label htmlFor="password" className="form-label">
-                      <i className="bi bi-lock-fill me-2"></i>
-                      Password
-                    </label>
+                    <label htmlFor="passwordInput" className="form-label">Password</label>
                     <input
                       type="password"
                       className="form-control form-control-lg"
-                      id="password"
+                      id="passwordInput"
                       placeholder="Enter your password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
@@ -148,7 +117,6 @@ function Login({ setUser }) {
                       disabled={isLoading}
                     />
                   </div>
-
                   <div className="d-grid">
                     <button
                       type="submit"
@@ -158,25 +126,27 @@ function Login({ setUser }) {
                       {isLoading ? (
                         <>
                           <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                          Signing in...
+                          Logging in...
                         </>
                       ) : (
-                        <>
-                          <i className="bi bi-box-arrow-in-right me-2"></i>
-                          Sign In
-                        </>
+                        'Logi sisse'
                       )}
                     </button>
                   </div>
+                  <div className="text-center mt-4">
+                    <p className="text-muted mb-1">
+                      Don't have an account? <a href="/register">Sign Up</a>
+                    </p>
+                    {/* NEW BUTTON: Continue to Store */}
+                    <button
+                      type="button" // Use type="button" to prevent accidental form submission
+                      className="btn btn-link mt-2"
+                      onClick={() => navigate('/store')}
+                    >
+                      Continue to Store
+                    </button>
+                  </div>
                 </form>
-
-                {/* Footer */}
-                <div className="text-center mt-4">
-                  <small className="text-muted">
-                    <i className="bi bi-info-circle me-1"></i>
-                    Admin access only
-                  </small>
-                </div>
               </div>
             </div>
           </div>
@@ -185,5 +155,3 @@ function Login({ setUser }) {
     </div>
   );
 }
-
-export default Login;

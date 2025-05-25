@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Search, ShoppingCart, Menu, User, Heart } from 'lucide-react';
+import { Search, ShoppingCart, Menu, User, Heart } from 'lucide-react'; // Make sure User is imported here if you use it locally in EpoodPage
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
-const EpoodPage = () => {
+const EpoodPage = ({ user, handleLogout }) => { // user and handleLogout are passed as props
+  const navigate = useNavigate();
+
   const [searchQuery, setSearchQuery] = useState('');
-  const [cartItems, setCartItems] = useState(0);
+  const [cartItems, setCartItems] = useState(0); // This state should ideally come from a global context/prop for a real cart
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState(['Kõik tooted']);
   const [selectedCategory, setSelectedCategory] = useState('Kõik tooted');
-  const [favorites, setFavorites] = useState([]);
+  const [favorites, setFavorites] = useState([]); // This state should ideally be linked to a user's favorites
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [sortBy, setSortBy] = useState('Nimetus');
@@ -43,7 +46,7 @@ const EpoodPage = () => {
         sortBy,
         sortOrder
       };
-      
+
       const response = await axios.get('http://localhost:3001/api/products', { params });
       setProducts(response.data);
       setError('');
@@ -68,11 +71,8 @@ const EpoodPage = () => {
 
   const addToCart = async (product) => {
     try {
-      // Here you would typically add to cart via API
-      // For now, just increment counter
-      setCartItems(cartItems + 1);
-      
-      // Optional: Show success message
+      // In a real application, you'd send this to a backend cart API
+      setCartItems(cartItems + 1); // Simple local update for now
       console.log(`Added ${product.Nimetus} to cart`);
     } catch (err) {
       console.error('Error adding to cart:', err);
@@ -80,8 +80,9 @@ const EpoodPage = () => {
   };
 
   const toggleFavorite = (productId) => {
-    setFavorites(prev => 
-      prev.includes(productId) 
+    // In a real application, this would interact with a user's favorite list on the backend
+    setFavorites(prev =>
+      prev.includes(productId)
         ? prev.filter(id => id !== productId)
         : [...prev, productId]
     );
@@ -89,116 +90,91 @@ const EpoodPage = () => {
 
   return (
     <div className="min-vh-100 bg-light">
-      {/* Header */}
-      <header className="bg-white shadow-sm">
-        {/* Top Header */}
-        <div className="bg-danger text-white py-2">
-          <div className="container">
-            <div className="d-flex justify-content-between align-items-center">
-              <div className="d-flex gap-3">
-                <small>🌍 Estonian</small>
-                <small>📞 Klienditeenindus</small>
+      {/* EpoodPage specific header content (Search and Navigation) */}
+      {/* We are placing this *outside* the <header> of App.jsx,
+          so it will appear *below* the global header from App.jsx */}
+      <div className="container py-3">
+        <div className="row align-items-center">
+          {/* Search Bar */}
+          <div className="col-md-6">
+            <form onSubmit={handleSearch}>
+              <div className="position-relative">
+                <input
+                  type="text"
+                  className="form-control form-control-lg pe-5"
+                  placeholder="Otsi toodet..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                <button
+                  type="submit"
+                  className="btn position-absolute top-50 end-0 translate-middle-y me-2 border-0"
+                >
+                  <Search size={20} />
+                </button>
               </div>
-              <div className="d-flex gap-3">
-                <small>Tasuta tarne alates 29€</small>
-                <small>⏰ Avatud 24/7</small>
-              </div>
-            </div>
+            </form>
+          </div>
+
+          {/* This empty div takes up space next to the search bar for alignment.
+              Adjust or remove if your layout needs change. */}
+          <div className="col-md-6 d-flex justify-content-end">
+            {/* If you wanted to place user actions here instead of App.jsx, you would move them.
+                For now, keeping them in App.jsx's global header. */}
           </div>
         </div>
+      </div>
 
-        {/* Main Header */}
-        <div className="container py-3">
-          <div className="row align-items-center">
-            {/* Logo */}
-            <div className="col-md-2">
-              <h2 className="text-danger fw-bold mb-0">E-RIMI</h2>
-            </div>
-
-            {/* Search */}
-            <div className="col-md-6">
-              <form onSubmit={handleSearch}>
-                <div className="position-relative">
-                  <input
-                    type="text"
-                    className="form-control form-control-lg pe-5"
-                    placeholder="Otsi toodet..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                  <button 
-                    type="submit"
-                    className="btn position-absolute top-50 end-0 translate-middle-y me-2 border-0"
-                  >
-                    <Search size={20} />
-                  </button>
-                </div>
-              </form>
-            </div>
-
-            {/* User Actions */}
-            <div className="col-md-4">
-              <div className="d-flex justify-content-end gap-3">
-                <button className="btn btn-outline-secondary">
-                  <User size={20} className="me-2" />
-                  Logi sisse
-                </button>
-                <button className="btn btn-outline-danger">
-                  <Heart size={20} className="me-2" />
-                  Lemmikud ({favorites.length})
-                </button>
-                <button className="btn btn-danger position-relative">
-                  <ShoppingCart size={20} className="me-2" />
-                  Ostukorv
-                  {cartItems > 0 && (
-                    <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning text-dark">
-                      {cartItems}
-                    </span>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Navigation */}
-        <div className="bg-light border-top">
-          <div className="container">
-            <nav className="py-2">
-              <div className="d-flex flex-wrap gap-1">
-                <button className="btn btn-outline-primary btn-sm me-3">
+      {/* Navigation */}
+      <div className="bg-light border-top">
+        <div className="container">
+          <nav className="py-2">
+            <div className="d-flex flex-wrap gap-2 align-items-center">
+              <div className="dropdown">
+                <button
+                  className="btn btn-outline-primary btn-sm dropdown-toggle"
+                  type="button"
+                  id="dropdownMenuButton"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                >
                   <Menu size={16} className="me-1" />
                   Tooted
                 </button>
-                {categories.map(category => (
-                  <button
-                    key={category}
-                    className={`btn btn-sm me-2 mb-1 ${
-                      selectedCategory === category 
-                        ? 'btn-primary' 
-                        : 'btn-outline-secondary'
-                    }`}
-                    onClick={() => setSelectedCategory(category)}
-                  >
-                    {category}
-                  </button>
-                ))}
+                <ul className="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                  <li>
+                    <button
+                      className="dropdown-item"
+                      onClick={() => setSelectedCategory('Kõik tooted')}
+                    >
+                      Kõik tooted
+                    </button>
+                  </li>
+                  {categories.map((category) => (
+                    <li key={category}>
+                      <button
+                        className={`dropdown-item ${selectedCategory === category ? 'active' : ''}`}
+                        onClick={() => setSelectedCategory(category)}
+                      >
+                        {category}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               </div>
-            </nav>
-          </div>
+              <span className="ms-2 small text-muted">
+                Valitud: <strong>{selectedCategory}</strong>
+              </span>
+            </div>
+          </nav>
         </div>
-      </header>
+      </div>
 
       {/* Main Content */}
       <main className="container py-4">
         {/* Breadcrumb */}
         <nav aria-label="breadcrumb" className="mb-4">
-          <ol className="breadcrumb">
-            <li className="breadcrumb-item">
-              <a href="#" className="text-decoration-none">Avaleht</a>
-            </li>
-            <li className="breadcrumb-item active">{selectedCategory}</li>
-          </ol>
+          {/* Breadcrumb content goes here */}
         </nav>
 
         {/* Error Message */}
@@ -211,13 +187,13 @@ const EpoodPage = () => {
         {/* Products Header */}
         <div className="d-flex justify-content-between align-items-center mb-4">
           <h3 className="mb-0">
-            {selectedCategory} 
+            {selectedCategory}
             <span className="text-muted ms-2">({products.length} toodet)</span>
           </h3>
           <div className="d-flex gap-2">
-            <select 
-              className="form-select form-select-sm" 
-              style={{width: 'auto'}}
+            <select
+              className="form-select form-select-sm"
+              style={{ width: 'auto' }}
               onChange={handleSortChange}
               value={`${sortBy}_${sortOrder}`}
             >
@@ -247,7 +223,7 @@ const EpoodPage = () => {
               <div className="col-12 text-center py-5">
                 <p className="text-muted fs-5">Ühtegi toodet ei leitud</p>
                 {searchQuery && (
-                  <button 
+                  <button
                     className="btn btn-outline-primary"
                     onClick={() => setSearchQuery('')}
                   >
@@ -265,59 +241,52 @@ const EpoodPage = () => {
                         <small>Vähe laos</small>
                       </div>
                     )}
-                    
-                    <button 
+
+                    <button
                       className="btn btn-sm position-absolute top-0 end-0 m-2 border-0 bg-white rounded-circle shadow-sm"
                       onClick={() => toggleFavorite(product.ToodeID)}
                     >
-                      <Heart 
-                        size={20} 
+                      <Heart
+                        size={20}
                         className={favorites.includes(product.ToodeID) ? 'text-danger' : 'text-muted'}
                         fill={favorites.includes(product.ToodeID) ? 'currentColor' : 'none'}
                       />
                     </button>
 
                     {/* Product Image */}
-                    <div 
-                      className="d-flex justify-content-center align-items-center bg-light"
-                    
-                    >
-                      {/* Product Image */}
+                    <div className="d-flex justify-content-center align-items-center bg-light">
                       <img
-                          src={
-                            product.Pilt
-                              ? `http://localhost:3001/${product.Pilt}`
-                              : '/uploads/placeholder.jpg' // asepilt
-                          }
-                          alt={product.Nimetus}
-                          className="d-flex justify-content-center align-items-center bg-light"
-                          style={{ height: '200px', objectFit: 'contain' }}
-                        />
-
-
-
+                        src={
+                          product.Pilt
+                            ? `http://localhost:3001/${product.Pilt}`
+                            : '/uploads/placeholder.jpg'
+                        }
+                        alt={product.Nimetus}
+                        className="img-fluid"
+                        style={{ height: '200px', objectFit: 'contain' }}
+                      />
                     </div>
-                    
+
                     <div className="card-body d-flex flex-column">
                       <span className="badge bg-secondary mb-2 align-self-start">
                         {product.Kategooria}
                       </span>
-                      
+
                       <h6 className="card-title">{product.Nimetus}</h6>
-                      
+
                       <div className="small text-muted mb-2">
                         <span>📍 {product.Asukoht}</span>
                         <span className="ms-2">📦 {product.Kogus} tk laos</span>
                       </div>
-                      
+
                       <div className="mt-auto">
                         <div className="d-flex align-items-center mb-2">
                           <span className="h5 text-danger mb-0">
                             {parseFloat(product.Hind).toFixed(2)}€
                           </span>
                         </div>
-                        
-                        <button 
+
+                        <button
                           className="btn btn-primary w-100"
                           onClick={() => addToCart(product)}
                           disabled={product.Kogus === 0}

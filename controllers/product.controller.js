@@ -68,7 +68,13 @@ exports.updateProduct = async (req, res) => {
       Asukoht: req.body.Asukoht
     };
 
-    if (!Nimetus || !Kategooria || !Hind || !Kogus || !Asukoht) {
+    if (
+      !req.body.Nimetus ||
+      !req.body.Kategooria ||
+      !req.body.Hind ||
+      !req.body.Kogus ||
+      !req.body.Asukoht
+    ) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
