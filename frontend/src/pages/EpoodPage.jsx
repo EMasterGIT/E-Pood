@@ -1,101 +1,150 @@
-import React, { useState, useEffect } from 'react';
-import { Search, ShoppingCart, Menu, User, Heart } from 'lucide-react'; // Make sure User is imported here if you use it locally in EpoodPage
+import React, { useEffect, useState } from 'react';
+import { Search, ShoppingCart, Heart, Menu } from 'lucide-react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import api from '../api'; // Import your configured Axios instance
 
-const EpoodPage = ({ user, handleLogout }) => { // user and handleLogout are passed as props
-  const navigate = useNavigate();
-
-  const [searchQuery, setSearchQuery] = useState('');
-  const [cartItems, setCartItems] = useState(0); // This state should ideally come from a global context/prop for a real cart
+const EpoodPage = ({ loadCart }) => {
   const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState(['Kõik tooted']);
+  const [originalProducts, setOriginalProducts] = useState([]);
+  const [favorites, setFavorites] = useState(() => {
+    return JSON.parse(localStorage.getItem('favorites')) || [];
+  });
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Kõik tooted');
-  const [favorites, setFavorites] = useState([]); // This state should ideally be linked to a user's favorites
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [sortBy, setSortBy] = useState('Nimetus');
+  const [sortBy, setSortBy] = useState('Nimi'); // Changed from 'Nimetus' to 'Nimi'
   const [sortOrder, setSortOrder] = useState('ASC');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  
+  // Get unique categories from products
+  const categories = ['Kõik tooted', ...new Set(originalProducts.map(p => p.Kategooria))];
 
-  // Fetch categories on component mount
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
-  // Fetch products when category, search, or sort changes
   useEffect(() => {
     fetchProducts();
-  }, [selectedCategory, searchQuery, sortBy, sortOrder]);
+  }, []);
 
-  const fetchCategories = async () => {
-    try {
-      const response = await axios.get('http://localhost:3001/api/products/categories');
-      setCategories(response.data);
-    } catch (err) {
-      console.error('Error fetching categories:', err);
-      setError('Failed to load categories');
+  useEffect(() => {
+    applyFilters();
+  }, [searchQuery, selectedCategory, sortBy, sortOrder, originalProducts]);
+
+  // Load cart when component mounts
+  useEffect(() => {
+    if (loadCart) {
+      loadCart();
     }
-  };
+  }, [loadCart]);
 
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const params = {
-        category: selectedCategory,
-        search: searchQuery,
-        sortBy,
-        sortOrder
-      };
-
-      const response = await axios.get('http://localhost:3001/api/products', { params });
-      setProducts(response.data);
-      setError('');
+      const res = await axios.get('http://localhost:3001/api/products');
+      console.log('Fetched products:', res.data); // Debug log
+      setOriginalProducts(res.data);
+      setProducts(res.data);
     } catch (err) {
-      console.error('Error fetching products:', err);
-      setError('Failed to load products');
+      console.error(err);
+      setError('Toodete laadimine ebaõnnestus.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    // fetchProducts will be called automatically due to useEffect dependency
+  const applyFilters = () => {
+    let filtered = [...originalProducts];
+    
+    if (searchQuery) {
+      filtered = filtered.filter(p =>
+        (p.Nimi || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (p.Kirjeldus || '').toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    
+    if (selectedCategory !== 'Kõik tooted') {
+      filtered = filtered.filter(p => p.Kategooria === selectedCategory);
+    }
+    
+    // Only filter products that are in stock
+    filtered = filtered.filter(p => (p.Laoseis || 0) > 0);
+    
+    filtered.sort((a, b) => {
+      const valA = a[sortBy];
+      const valB = b[sortBy];
+      if (typeof valA === 'string') {
+        return sortOrder === 'ASC'
+          ? valA.localeCompare(valB)
+          : valB.localeCompare(valA);
+      }
+      return sortOrder === 'ASC' ? valA - valB : valB - valA;
+    });
+    
+    setProducts(filtered);
   };
 
   const handleSortChange = (e) => {
-    const [newSortBy, newSortOrder] = e.target.value.split('_');
-    setSortBy(newSortBy);
-    setSortOrder(newSortOrder);
+    const [field, order] = e.target.value.split('_');
+    setSortBy(field);
+    setSortOrder(order);
   };
 
+  const handleSearch = (e) => {
+    e.preventDefault();
+    applyFilters();
+  };
+
+  const toggleFavorite = (id) => {
+    let updatedFavorites = [...favorites];
+    if (favorites.includes(id)) {
+      updatedFavorites = updatedFavorites.filter(fid => fid !== id);
+    } else {
+      updatedFavorites.push(id);
+    }
+    setFavorites(updatedFavorites);
+    localStorage.setItem('favorites', JSON.stringify(updatedFavorites));
+  };
+
+  const user = JSON.parse(localStorage.getItem('user'));
+  
   const addToCart = async (product) => {
+    console.log('Lisati ostukorvi:', product);
+    if (!user || !user.id) {
+      alert('Palun logi sisse, et lisada tooteid ostukorvi.');
+      return;
+    }
+    
     try {
-      // In a real application, you'd send this to a backend cart API
-      setCartItems(cartItems + 1); // Simple local update for now
-      console.log(`Added ${product.Nimetus} to cart`);
-    } catch (err) {
-      console.error('Error adding to cart:', err);
+      const response = await api.post('/cart', {
+        userId: user.id,
+        toodeId: product.ToodeID,
+        kogus: 1,
+      });
+      alert('Toode lisatud ostukorvi!');
+      if (loadCart) {
+        loadCart(); // Refresh cart after adding item
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error.response?.data || error.message);
+      alert('Toote lisamine ostukorvi ebaõnnestus.');
     }
   };
 
-  const toggleFavorite = (productId) => {
-    // In a real application, this would interact with a user's favorite list on the backend
-    setFavorites(prev =>
-      prev.includes(productId)
-        ? prev.filter(id => id !== productId)
-        : [...prev, productId]
+  if (loading) {
+    return (
+      <div className="container mt-4">
+        <div className="text-center">
+          <div className="spinner-border" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+        </div>
+      </div>
     );
-  };
+  }
+
 
   return (
     <div className="min-vh-100 bg-light">
-      {/* EpoodPage specific header content (Search and Navigation) */}
-      {/* We are placing this *outside* the <header> of App.jsx,
-          so it will appear *below* the global header from App.jsx */}
+      {/* Search and Category Filter */}
       <div className="container py-3">
         <div className="row align-items-center">
-          {/* Search Bar */}
           <div className="col-md-6">
             <form onSubmit={handleSearch}>
               <div className="position-relative">
@@ -115,17 +164,13 @@ const EpoodPage = ({ user, handleLogout }) => { // user and handleLogout are pas
               </div>
             </form>
           </div>
-
-          {/* This empty div takes up space next to the search bar for alignment.
-              Adjust or remove if your layout needs change. */}
           <div className="col-md-6 d-flex justify-content-end">
-            {/* If you wanted to place user actions here instead of App.jsx, you would move them.
-                For now, keeping them in App.jsx's global header. */}
+            {/* Right-side spacing or future user menu */}
           </div>
         </div>
       </div>
-
-      {/* Navigation */}
+  
+      {/* Category Navigation */}
       <div className="bg-light border-top">
         <div className="container">
           <nav className="py-2">
@@ -134,29 +179,24 @@ const EpoodPage = ({ user, handleLogout }) => { // user and handleLogout are pas
                 <button
                   className="btn btn-outline-primary btn-sm dropdown-toggle"
                   type="button"
-                  id="dropdownMenuButton"
                   data-bs-toggle="dropdown"
-                  aria-expanded="false"
                 >
                   <Menu size={16} className="me-1" />
                   Tooted
                 </button>
-                <ul className="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                <ul className="dropdown-menu">
                   <li>
-                    <button
-                      className="dropdown-item"
-                      onClick={() => setSelectedCategory('Kõik tooted')}
-                    >
+                    <button className="dropdown-item" onClick={() => setSelectedCategory('Kõik tooted')}>
                       Kõik tooted
                     </button>
                   </li>
-                  {categories.map((category) => (
-                    <li key={category}>
+                  {categories.map((cat) => (
+                    <li key={cat}>
                       <button
-                        className={`dropdown-item ${selectedCategory === category ? 'active' : ''}`}
-                        onClick={() => setSelectedCategory(category)}
+                        className={`dropdown-item ${selectedCategory === cat ? 'active' : ''}`}
+                        onClick={() => setSelectedCategory(cat)}
                       >
-                        {category}
+                        {cat}
                       </button>
                     </li>
                   ))}
@@ -169,79 +209,56 @@ const EpoodPage = ({ user, handleLogout }) => { // user and handleLogout are pas
           </nav>
         </div>
       </div>
-
+  
       {/* Main Content */}
       <main className="container py-4">
-        {/* Breadcrumb */}
-        <nav aria-label="breadcrumb" className="mb-4">
-          {/* Breadcrumb content goes here */}
-        </nav>
-
-        {/* Error Message */}
-        {error && (
-          <div className="alert alert-danger" role="alert">
-            {error}
-          </div>
-        )}
-
-        {/* Products Header */}
+        {error && <div className="alert alert-danger">{error}</div>}
+  
         <div className="d-flex justify-content-between align-items-center mb-4">
-          <h3 className="mb-0">
-            {selectedCategory}
-            <span className="text-muted ms-2">({products.length} toodet)</span>
+          <h3>
+            {selectedCategory} <span className="text-muted ms-2">({products.length} toodet)</span>
           </h3>
-          <div className="d-flex gap-2">
+          <div>
             <select
               className="form-select form-select-sm"
               style={{ width: 'auto' }}
-              onChange={handleSortChange}
               value={`${sortBy}_${sortOrder}`}
+              onChange={handleSortChange}
             >
-              <option value="Nimetus_ASC">Nimetus A-Z</option>
-              <option value="Nimetus_DESC">Nimetus Z-A</option>
+              <option value="Nimi_ASC">Nimi A-Z</option>
+              <option value="Nimi_DESC">Nimi Z-A</option>
               <option value="Hind_ASC">Hind: odavam enne</option>
               <option value="Hind_DESC">Hind: kallim enne</option>
               <option value="Kogus_DESC">Kogus: rohkem enne</option>
             </select>
           </div>
         </div>
-
-        {/* Loading Spinner */}
-        {loading && (
+  
+        {loading ? (
           <div className="text-center py-5">
-            <div className="spinner-border text-primary" role="status">
-              <span className="visually-hidden">Loading...</span>
-            </div>
+            <div className="spinner-border text-primary" role="status"></div>
             <p className="mt-2">Laadime tooteid...</p>
           </div>
-        )}
-
-        {/* Products Grid */}
-        {!loading && (
+        ) : (
           <div className="row g-4">
             {products.length === 0 ? (
               <div className="col-12 text-center py-5">
                 <p className="text-muted fs-5">Ühtegi toodet ei leitud</p>
                 {searchQuery && (
-                  <button
-                    className="btn btn-outline-primary"
-                    onClick={() => setSearchQuery('')}
-                  >
+                  <button className="btn btn-outline-primary" onClick={() => setSearchQuery('')}>
                     Tühjenda otsing
                   </button>
                 )}
               </div>
             ) : (
-              products.map(product => (
+              products.map((product) => (
                 <div key={product.ToodeID} className="col-lg-3 col-md-4 col-sm-6">
                   <div className="card h-100 shadow-sm position-relative">
-                    {/* Low stock warning */}
-                    {product.Kogus <= 5 && (
+                    {product.Laoseis <= 5 && (
                       <div className="position-absolute top-0 start-0 bg-warning text-dark px-2 py-1 rounded-end">
                         <small>Vähe laos</small>
                       </div>
                     )}
-
                     <button
                       className="btn btn-sm position-absolute top-0 end-0 m-2 border-0 bg-white rounded-circle shadow-sm"
                       onClick={() => toggleFavorite(product.ToodeID)}
@@ -252,47 +269,44 @@ const EpoodPage = ({ user, handleLogout }) => { // user and handleLogout are pas
                         fill={favorites.includes(product.ToodeID) ? 'currentColor' : 'none'}
                       />
                     </button>
-
-                    {/* Product Image */}
-                    <div className="d-flex justify-content-center align-items-center bg-light">
-                      <img
-                        src={
-                          product.Pilt
-                            ? `http://localhost:3001/${product.Pilt}`
-                            : '/uploads/placeholder.jpg'
-                        }
-                        alt={product.Nimetus}
-                        className="img-fluid"
-                        style={{ height: '200px', objectFit: 'contain' }}
-                      />
-                    </div>
-
+                    <div className="d-flex justify-content-center align-items-center bg-light position-relative" style={{ height: '200px' }}>
+                            <img
+                              src={
+                                product.PiltUrl && product.PiltUrl.trim()
+                                  ? product.PiltUrl
+                                  : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PGNpcmNsZSBjeD0iNTAiIGN5PSI2MCIgcj0iMTAiIGZpbGw9IiNjY2MiLz48cGF0aCBkPSJNMzAgMTQwaDE0MGwtMzAtNDBMMTIwIDEyMGwtMjAgMjB6IiBmaWxsPSIjY2NjIi8+PC9zdmc+'
+                              }
+                              className="card-img-top"
+                              alt={
+                                product.PiltUrl && product.PiltUrl.trim()
+                                  ? (product.Nimi || 'Toode')
+                                  : 'Pilt' 
+                              }
+                              style={{
+                                maxHeight: '100%',
+                                maxWidth: '100%',
+                                objectFit: 'contain',
+                                position: 'absolute',
+                              }}
+                            />
+                          </div>
                     <div className="card-body d-flex flex-column">
                       <span className="badge bg-secondary mb-2 align-self-start">
                         {product.Kategooria}
                       </span>
-
-                      <h6 className="card-title">{product.Nimetus}</h6>
-
+                      <h6 className="card-title">{product.Nimi}</h6>
                       <div className="small text-muted mb-2">
-                        <span>📍 {product.Asukoht}</span>
-                        <span className="ms-2">📦 {product.Kogus} tk laos</span>
+                        📍 {product.Asukoht} <span className="ms-2">📦 {product.Laoseis} tk</span>
                       </div>
-
                       <div className="mt-auto">
-                        <div className="d-flex align-items-center mb-2">
-                          <span className="h5 text-danger mb-0">
-                            {parseFloat(product.Hind).toFixed(2)}€
-                          </span>
-                        </div>
-
+                        <div className="h5 text-danger mb-2">{parseFloat(product.Hind).toFixed(2)}€</div>
                         <button
                           className="btn btn-primary w-100"
                           onClick={() => addToCart(product)}
-                          disabled={product.Kogus === 0}
+                          disabled={product.Laoseis === 0}
                         >
                           <ShoppingCart size={16} className="me-2" />
-                          {product.Kogus === 0 ? 'Otsas' : 'Lisa ostukorvi'}
+                          {product.Laoseis === 0 ? 'Otsas' : 'Lisa ostukorvi'}
                         </button>
                       </div>
                     </div>
@@ -303,7 +317,7 @@ const EpoodPage = ({ user, handleLogout }) => { // user and handleLogout are pas
           </div>
         )}
       </main>
-
+  
       {/* Footer */}
       <footer className="bg-dark text-white py-5 mt-5">
         <div className="container">
@@ -343,6 +357,5 @@ const EpoodPage = ({ user, handleLogout }) => { // user and handleLogout are pas
       </footer>
     </div>
   );
-};
-
+}
 export default EpoodPage;

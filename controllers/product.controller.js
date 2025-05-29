@@ -1,55 +1,72 @@
+// controllers/product.controller.js
+
 const fs = require('fs');
 const path = require('path');
-const { toode } = require('../models');
+const { Op } = require('sequelize'); // Keep Op for operators like Op.like
+const db = require('../models'); // Import the db object which contains models and the sequelize instance
+const { Toode } = db; // Destructure Toode model from db
+const sequelize = db.sequelize; // <--- Import the sequelize instance
 
 exports.getAllProducts = async (req, res) => {
   try {
-    const { category, search, sortBy = 'ToodeID', sortOrder = 'ASC' } = req.query;
-
-    const order = sortOrder === 'DESC' ? 'DESC' : 'ASC';
-
-    const where = {};
-
-    if (category && category !== 'Kõik tooted') {
-      where.Kategooria = category;
-    }
-
-    if (search) {
-      where.Nimetus = { [require('sequelize').Op.like]: `%${search}%` };
-    }
-
-    const products = await toode.findAll({
-      where,
-      order: [[sortBy, order]]
+    const products = await Toode.findAll({
+      attributes: [
+        'ToodeID',
+        'Nimi',
+        'Kirjeldus',
+        'Hind',
+        'Kategooria',
+        'Laoseis',
+        'PiltURL'
+      ]
     });
 
-    res.json(products);
-  } catch (error) {
-    console.error('Failed to load products:', error);
-    res.status(500).json({ error: 'Failed to load products' });
+    const withUrl = products.map(p => {
+      const j = p.toJSON();
+      j.PiltUrl = j.PiltURL
+        ? `${req.protocol}://${req.get('host')}/${j.PiltURL}`
+        : null;
+      return j; // Keep PiltURL for editing purposes
+    });
+
+    return res.json(withUrl);
+  } catch (err) {
+    console.error('Failed to load products:', err);
+    return res.status(500).json({ error: 'Failed to load products' });
   }
 };
 
-
+// POST /api/products
 exports.addProduct = async (req, res) => {
   try {
-    const { Nimetus, Kategooria, Hind, Kogus, Asukoht } = req.body;
+    const { Nimi, Kirjeldus, Hind, Kategooria, Laoseis } = req.body;
     const Pilt = req.file ? path.join('uploads', 'products', req.file.filename) : null;
 
-    const newProduct = await toode.create({ Nimetus, Kategooria, Hind, Kogus, Asukoht, Pilt });
-    if (!Nimetus || !Kategooria || !Hind || !Kogus || !Asukoht) {
-      return res.status(400).json({ error: 'Missing required fields' });
+    if (!Nimi || !Kategooria || !Hind || !Laoseis) {
+      return res.status(400).json({
+        error: 'Fields Nimi, Kategooria, Hind and Laoseis are all required.'
+      });
     }
-    // Attach full URL for frontend (optional)
-    const productWithUrl = {
-      ...newProduct.toJSON(),
-      PiltUrl: Pilt ? `${req.protocol}://${req.get('host')}/${Pilt}` : null
-    };
 
-    res.status(201).json(productWithUrl);
-  } catch (error) {
-    console.error('Add product error:', error);
-    res.status(500).json({ error: 'Failed to add product' });
+    const newProduct = await Toode.create({
+      Nimi,
+      Kirjeldus: Kirjeldus || '',
+      Hind,
+      Kategooria,
+      Laoseis,
+      PiltURL: Pilt,
+    });
+
+    const result = newProduct.toJSON();
+    result.PiltUrl = Pilt
+      ? `${req.protocol}://${req.get('host')}/${Pilt}`
+      : null;
+
+    return res.status(201).json(result);
+
+  } catch (err) {
+    console.error('Add product error in controller:', err);
+    return res.status(500).json({ error: 'Server Error', detail: err.message });
   }
 };
 
@@ -60,48 +77,46 @@ exports.updateProduct = async (req, res) => {
     console.log('Request body:', req.body);
     console.log('Uploaded file:', req.file);
 
-    const updateData = {
-      Nimetus: req.body.Nimetus,
-      Kategooria: req.body.Kategooria,
-      Hind: req.body.Hind,
-      Kogus: req.body.Kogus,
-      Asukoht: req.body.Asukoht
-    };
-
-    if (
-      !req.body.Nimetus ||
-      !req.body.Kategooria ||
-      !req.body.Hind ||
-      !req.body.Kogus ||
-      !req.body.Asukoht
-    ) {
+    // Use consistent field names - expecting frontend to send DB field names
+    const { Nimi, Kategooria, Hind, Laoseis, Kirjeldus } = req.body;
+    if (!Nimi || !Kategooria || !Hind || !Laoseis) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
+    // Prepare update data with DB columns
+    const updateData = {
+      Nimi,
+      Kategooria,
+      Hind,
+      Laoseis,
+      Kirjeldus: Kirjeldus || ''
+    };
 
+    // Handle image update
     if (req.file) {
-      const oldProduct = await toode.findOne({ where: { ToodeID: productId } });
-      if (oldProduct && oldProduct.Pilt) {
-        const imagePath = path.join(__dirname, '..', oldProduct.Pilt);
+      // Delete old image if exists
+      const oldProduct = await Toode.findOne({ where: { ToodeID: productId } });
+      if (oldProduct && oldProduct.PiltURL) {
+        const imagePath = path.join(__dirname, '..', oldProduct.PiltURL);
         console.log('Old image path:', imagePath);
         if (fs.existsSync(imagePath)) {
           fs.unlinkSync(imagePath);
         }
       }
-      updateData.Pilt = `uploads/products/${req.file.filename}`;
+      updateData.PiltURL = path.join('uploads', 'products', req.file.filename);
     }
 
-    const [updated] = await toode.update(updateData, {
+    const [updated] = await Toode.update(updateData, {
       where: { ToodeID: productId }
     });
 
     console.log('Updated rows count:', updated);
 
     if (updated) {
-      const updatedProduct = await toode.findOne({ where: { ToodeID: productId } });
+      const updatedProduct = await Toode.findOne({ where: { ToodeID: productId } });
       const productWithUrl = {
         ...updatedProduct.toJSON(),
-        PiltUrl: updatedProduct.Pilt ? `${req.protocol}://${req.get('host')}/${updatedProduct.Pilt}` : null
+        PiltUrl: updatedProduct.PiltURL ? `${req.protocol}://${req.get('host')}/${updatedProduct.PiltURL}` : null
       };
       return res.json(productWithUrl);
     } else {
@@ -113,54 +128,65 @@ exports.updateProduct = async (req, res) => {
   }
 };
 
-
 exports.deleteProduct = async (req, res) => {
   try {
-    console.log('Delete request received for ID:', req.params.id);
+    const productId = req.params.id;
+    console.log('Delete request received for ID:', productId);
 
-    const product = await toode.findOne({ where: { ToodeID: req.params.id } });
+    // Find product by ToodeID
+    const product = await Toode.findOne({ where: { ToodeID: productId } });
     console.log('Found product:', product);
 
-    if (product && product.Pilt) {
-      const imagePath = path.join(__dirname, '..', product.Pilt);
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    // Delete associated image if exists
+    if (product.PiltURL) {
+      const imagePath = path.join(__dirname, '..', product.PiltURL);
       console.log('Trying to delete image at:', imagePath);
 
-      if (fs.existsSync(imagePath)) {
-        try {
+      try {
+        if (fs.existsSync(imagePath)) {
           fs.unlinkSync(imagePath);
-        } catch (err) {
-          console.warn('Failed to delete image:', err.message);
         }
+      } catch (err) {
+        console.warn('Failed to delete image:', err.message);
       }
-}
+    }
 
-    const deleted = await toode.destroy({
-      where: { ToodeID: req.params.id }
+    // Delete product from DB
+    const deleted = await Toode.destroy({
+      where: { ToodeID: productId }
     });
 
     console.log('Deleted count:', deleted);
 
     if (deleted) {
-      res.json({ message: 'Product deleted' });
+      return res.json({ message: 'Product deleted' });
     } else {
-      res.status(404).json({ error: 'Product not found' });
+      return res.status(404).json({ error: 'Product not found' });
     }
   } catch (error) {
     console.error('Delete error:', error);
-    res.status(400).json({ error: 'Could not delete product' });
+    return res.status(500).json({ error: 'Could not delete product' });
   }
 };
 
 exports.getCategories = async (req, res) => {
   try {
-    const categories = await toode.findAll({
+    // Fetch distinct categories (Kategooria)
+    const categories = await Toode.findAll({
       attributes: [
-        [require('sequelize').fn('DISTINCT', require('sequelize').col('Kategooria')), 'Kategooria']
+        [sequelize.fn('DISTINCT', sequelize.col('Kategooria')), 'Kategooria']
       ],
       order: [['Kategooria', 'ASC']]
     });
 
-    res.json(categories.map(cat => cat.Kategooria));
+    // Map to plain array of strings
+    const categoryList = categories.map(cat => cat.Kategooria);
+
+    res.json(categoryList);
   } catch (error) {
     console.error('Failed to load categories:', error);
     res.status(500).json({ error: 'Failed to load categories' });

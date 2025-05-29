@@ -1,19 +1,56 @@
+// models/tellimus.js
 'use strict';
+const { Model } = require('sequelize');
+
 module.exports = (sequelize, DataTypes) => {
-  const Tellimus = sequelize.define('tellimus', {
-    KasutajaID: DataTypes.INTEGER,
-    OstukorvID: DataTypes.INTEGER,
-    KullerID: DataTypes.INTEGER,
-    Staatus: DataTypes.STRING,
-    Asukoht: DataTypes.STRING
-  }, {});
-  
-  Tellimus.associate = function(models) {
-    Tellimus.belongsTo(models.kasutaja, { foreignKey: 'KasutajaID' });
-    Tellimus.belongsTo(models.ostukorv, { foreignKey: 'OstukorvID' });
-    Tellimus.belongsTo(models.kuller, { foreignKey: 'KullerID' });
-    Tellimus.hasMany(models.teenindaja, { foreignKey: 'TellimusID' });
-  };
+  class Tellimus extends Model {
+    static associate(models) {
+      // Define associations here.
+      Tellimus.belongsTo(models.Kasutaja, { foreignKey: 'KasutajaID', as: 'kasutaja' });
+      Tellimus.belongsTo(models.Ostukorv, { foreignKey: 'OstukorvID', as: 'ostukorv' });
+      // Tellimus.belongsTo(models.Kuller, { foreignKey: 'KullerID', as: 'kuller' }); // Re-enable if you have a Kuller model
+
+      // REMOVED: Tellimus.hasMany(models.TellimuseToode, ...)
+      // We will access order items through the associated Ostukorv model instead.
+    }
+  }
+
+  Tellimus.init(
+    {
+      TellimusID: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true,
+        unique: true
+      },
+      KasutajaID: {
+        type: DataTypes.INTEGER,
+        allowNull: false
+      },
+      OstukorvID: {
+        type: DataTypes.INTEGER,
+        allowNull: true
+      },
+      KullerID: {
+        type: DataTypes.INTEGER,
+        allowNull: true
+      },
+      Staatus: {
+        type: DataTypes.STRING,
+        defaultValue: 'Ootel'
+      },
+      Asukoht: {
+        type: DataTypes.STRING,
+        allowNull: false
+      }
+    },
+    {
+      sequelize,
+      modelName: 'Tellimus',
+      tableName: 'Tellimus',
+      timestamps: true
+    }
+  );
 
   return Tellimus;
 };

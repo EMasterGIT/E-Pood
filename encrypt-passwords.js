@@ -1,11 +1,11 @@
 // encrypt-passwords.js
 
 const bcrypt = require('bcrypt');
-const { kasutaja } = require('./models'); // adjust path if needed
+const { Kasutaja } = require('./models'); // adjust path if needed
 
 async function encryptPasswords() {
   try {
-    const users = await kasutaja.findAll();
+    const users = await Kasutaja.findAll();
 
     for (const user of users) {
       // Skip if password is already hashed (bcrypt hashes always start with $2)

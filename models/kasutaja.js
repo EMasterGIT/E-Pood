@@ -1,21 +1,23 @@
-// models/kasutaja.js
+// models/Kasutaja.js
 'use strict';
-const { Model } = require('sequelize');
+const { Model, DataTypes } = require('sequelize');
 
-module.exports = (sequelize, DataTypes) => {
-  class kasutaja extends Model {
+module.exports = (sequelize) => {
+  class Kasutaja extends Model {
     static associate(models) {
-      kasutaja.hasMany(models.ostukorv, { foreignKey: 'KasutajaID' });
-      kasutaja.hasMany(models.tellimus, { foreignKey: 'KasutajaID' });
+      Kasutaja.hasMany(models.Ostukorv, { foreignKey: 'KasutajaID' });
+      Kasutaja.hasMany(models.Tellimus, { foreignKey: 'KasutajaID' });
+      // Add any other Kasutaja associations here
     }
   }
 
-  kasutaja.init(
+  Kasutaja.init(
     {
       KasutajaID: {
         type: DataTypes.INTEGER,
         primaryKey: true,
-        autoIncrement: true
+        autoIncrement: true,
+        allowNull: false
       },
       Nimi: {
         type: DataTypes.STRING,
@@ -40,11 +42,12 @@ module.exports = (sequelize, DataTypes) => {
     },
     {
       sequelize,
-      modelName: 'kasutaja',
-      tableName: 'kasutaja',
+      modelName: 'Kasutaja', // MUST be PascalCase
+      tableName: 'Kasutaja', // MUST be PascalCase and match 'model' in other references
+      freezeTableName: true, // IMPORTANT: ensures tableName is used exactly
       timestamps: true
     }
   );
 
-  return kasutaja;
+  return Kasutaja;
 };
