@@ -1,7 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../api';
 
 export default function Cart({ user }) {
+  const navigate = useNavigate();
   const [dbCart, setDbCart] = useState(null);
   const [cartItems, setCartItems] = useState([]);
   const [total, setTotal] = useState(0);
@@ -14,7 +16,7 @@ export default function Cart({ user }) {
   const calculateTotal = useCallback((items) => {
     if (!Array.isArray(items)) return setTotal(0);
     const sum = items.reduce((acc, item) => {
-      // Use current price from the Toode table if available, otherwise use cart price
+      // Kasuta toote hind ja kogus
       const price = item.toode?.Hind ? parseFloat(item.toode.Hind) : parseFloat(item.Hind);
       const quantity = parseInt(item.Kogus);
       if (isNaN(price) || isNaN(quantity)) return acc;
@@ -40,17 +42,14 @@ export default function Cart({ user }) {
       setDbCart(ostukorv);
       setCartItems(cartItems);
       calculateTotal(cartItems);
-      setOrderPlaced(false); // Reset order placed status when cart is found
+      
     } catch (error) {
       if (error.response?.status === 404) {
-        // No cart found – treat as empty cart
+        // Kui ostukorvi ei leita, siis tühjenda andmed
         setDbCart(null);
         setCartItems([]);
         setTotal(0);
-        // Don't show "order placed" message if user just has no cart
-        if (!orderPlaced) {
-          setOrderPlaced(false);
-        }
+       
       } else {
         console.error('Error fetching cart:', error);
         setDbCart(null);
@@ -60,22 +59,27 @@ export default function Cart({ user }) {
     } finally {
       setLoading(false);
     }
-  }, [user, calculateTotal, orderPlaced]);
+  }, [user, calculateTotal]); 
 
   useEffect(() => {
     fetchCart();
   }, [fetchCart]);
 
+  // Taasta kui kasutaja ID muutub, tühjenda tellimuse olek
+  useEffect(() => {
+    setOrderPlaced(false);
+  }, [user?.id]);
+
   function updateCartCount(cart) {
     if (!cart || !cart.ostukorviTooted) return;
     const uniqueProductCount = cart.ostukorviTooted.length;
     console.log('Cart product count:', uniqueProductCount);
-    // set this count to your state or display in UI
   }
 
   const removeItemFromCart = async (productId) => {
     try {
       setLoading(true);
+      setOrderPlaced(false); // Taasta tellimuse olek, kui kasutaja eemaldab toote
       await api.delete(`/cart/${productId}`);
       await fetchCart();
     } catch (error) {
@@ -90,6 +94,7 @@ export default function Cart({ user }) {
     if (newQuantity < 1) return;
     try {
       setLoading(true);
+      setOrderPlaced(false); // Taasta tellimuse olek, kui kasutaja muudab kogust
       await api.put(`/cart/${productId}`, { quantity: newQuantity });
       await fetchCart();
     } catch (error) {
@@ -122,10 +127,11 @@ export default function Cart({ user }) {
         location: deliveryLocation,
       });
       
+      // Sea tellimuse olek edukaks
       setOrderPlaced(true);
       alert('Tellimus edukalt esitatud!');
       
-      // Clear local state
+      // Puhasta ostukorv ja uuenda olekuid
       setCartItems([]);
       setDbCart(null);
       setTotal(0);
@@ -143,7 +149,7 @@ export default function Cart({ user }) {
     }
   };
 
-  // Display current price or cart price with indication
+  // Kuvab toote hinna ja kontrollib, kas see on muutunud
   const getDisplayPrice = (item) => {
     const currentPrice = item.toode?.Hind ? parseFloat(item.toode.Hind) : null;
     const cartPrice = parseFloat(item.Hind);
@@ -178,7 +184,16 @@ export default function Cart({ user }) {
       {orderPlaced && cartItems.length === 0 ? (
         <div className="alert alert-success">
           <h4>Tellimus esitatud!</h4>
-          <p>Teie tellimus on edukalt esitatud ja töösse võetud. Täname!</p>
+          <p>Teie tellimus on edukalt esitatud. Täname!</p>
+          <button 
+            className="btn btn-primary mt-2" 
+            onClick={() => {
+              setOrderPlaced(false);
+              navigate('/store');
+            }}
+          >
+            Jätka ostlemist
+          </button>
         </div>
       ) : cartItems.length === 0 ? (
         <p>Ostukorv on tühi</p>

@@ -1,6 +1,16 @@
 const { Tellimus, Ostukorv, OstukorviToode, Toode, Kasutaja, Teenindaja, Kuller } = require('../models');
 
-// User creates an order
+// Aitab juhusliku kulleri valimisel
+const getRandomKuller = async () => {
+  const kullers = await Kuller.findAll();
+  if (kullers.length === 0) {
+    throw new Error('No Kuller available');
+  }
+  // Juhuslik kulleri valimine
+  return kullers[Math.floor(Math.random() * kullers.length)];
+};
+
+// Kasutaja loob tellimuse
 exports.createOrder = async (req, res) => {
   try {
     const { ostukorvId, location } = req.body;
@@ -10,7 +20,7 @@ exports.createOrder = async (req, res) => {
       return res.status(400).json({ error: 'Cart ID and delivery location are required.' });
     }
 
-    // Verify cart belongs to user and is active
+    // Tuvastakse, kas kasutajal on aktiivne ostukorv
     const cart = await Ostukorv.findOne({
       where: { 
         OstukorvID: ostukorvId, 
@@ -32,7 +42,7 @@ exports.createOrder = async (req, res) => {
       return res.status(400).json({ error: 'Cart is empty.' });
     }
 
-    // Validate stock availability for all items
+    // Laoseisu kontrollimine
     for (const item of cart.ostukorviTooted) {
       const product = await Toode.findByPk(item.ToodeID);
       if (!product) {
@@ -45,16 +55,26 @@ exports.createOrder = async (req, res) => {
       }
     }
 
-    // Create the order
+    // Vali juhuslik Kuller
+    const assignedKuller = await getRandomKuller();
+
+    // Tekita tellimus 
     const order = await Tellimus.create({
       KasutajaID: userId,
       OstukorvID: ostukorvId,
+      KullerID: assignedKuller.KullerID, // Lisa kuller
       Asukoht: location,
-      Staatus: 'Ootel',
-      TellimuseKuupaev: new Date()
+      Staatus: 'Ootel'
     });
 
-    // Reduce stock for each item and update cart status
+    // Automaatiliselt loo Teenindaja
+    const teenindaja = await Teenindaja.create({
+      Nimi: `Teenindaja for Order ${order.TellimusID}`,
+      TellimusID: order.TellimusID,
+      KullerID: assignedKuller.KullerID
+    });
+
+    // Vähenda laoseisu tellimuse kaupade jaoks
     for (const item of cart.ostukorviTooted) {
       const product = await Toode.findByPk(item.ToodeID);
       if (product) {
@@ -63,13 +83,15 @@ exports.createOrder = async (req, res) => {
       }
     }
 
-    // Update cart status to completed
+    // Uuenda ostukorvi staatus
     await cart.update({ Staatus: 'Kinnitatud' });
 
     res.status(201).json({ 
-      message: 'Order created successfully.', 
+      message: 'Tellimus edukalt loodud', 
       order: order,
-      orderId: order.TellimusID 
+      orderId: order.TellimusID,
+      assignedKuller: assignedKuller,
+      assignedTeenindaja: teenindaja
     });
 
   } catch (error) {
@@ -78,10 +100,10 @@ exports.createOrder = async (req, res) => {
   }
 };
 
-// Admin gets all orders
+// Admin jaoks kõik tellimused
 exports.getAllOrders = async (req, res) => {
   try {
-    const { staatus } = req.query; // Get status filter from query params
+    const { staatus } = req.query; // Staatus võib olla query parameeter, nt ?staatus=Ootel
     
     const whereClause = {};
     if (staatus) {
@@ -95,6 +117,11 @@ exports.getAllOrders = async (req, res) => {
           model: Kasutaja, 
           as: 'kasutaja',
           attributes: ['KasutajaID', 'Nimi', 'Email'] 
+        },
+        {
+          model: Kuller,
+          as: 'kuller', 
+          attributes: ['KullerID', 'Nimi', 'Telefoninumber']
         },
         {
           model: Ostukorv,
@@ -122,34 +149,110 @@ exports.getAllOrders = async (req, res) => {
   }
 };
 
-// Admin updates order status
+// Admin uuendab tellimuse staatust
 exports.updateOrderStatus = async (req, res) => {
   try {
-    
     const { id } = req.params;
     const { staatus } = req.body;
-    console.log('Updating order status:', req.params.id, req.body);
+
+    console.log('Uuendan tellimuse staatust', req.params.id, req.body);
 
     if (!staatus) {
-      return res.status(400).json({ error: 'Order status is required.' });
+      return res.status(400).json({ error: 'Tellimuse staatus on nõutud' });
     }
 
-    const order = await Tellimus.findByPk(id);
+    const order = await Tellimus.findByPk(id, {
+      include: [{
+        model: Ostukorv,
+        as: 'ostukorv',
+        include: [{
+          model: OstukorviToode,
+          as: 'ostukorviTooted',
+          include: [{
+            model: Toode,
+            as: 'toode'
+          }]
+        }]
+      }]
+    });
+
     if (!order) {
-      return res.status(404).json({ error: 'Order not found.' });
+      return res.status(404).json({ error: 'Tellimust ei leitud' });
     }
 
-    order.Staatus = staatus
+    const previousStatus = order.Staatus;
+
+    // Kui tellimuse staatus on 'Tühistatud', siis taastame laoseisu
+    if (staatus === 'Tühistatud' && previousStatus !== 'Tühistatud') {
+      if (order.ostukorv && order.ostukorv.ostukorviTooted) {
+        for (const item of order.ostukorv.ostukorviTooted) {
+          const product = await Toode.findByPk(item.ToodeID);
+          if (product) {
+            const restoredStock = product.Laoseis + item.Kogus;
+            await product.update({ Laoseis: restoredStock });
+            console.log(`Taastati kogus: ${product.Nimi}: +${item.Kogus} (Uus laoseis: ${restoredStock})`);
+          }
+        }
+      }
+    }
+
+    // Kui tellimuse staatus pannakse uuesti tühistatud siis vähenda taas laoseisu
+    if (previousStatus === 'Tühistatud' && staatus !== 'Tühistatud') {
+      if (order.ostukorv && order.ostukorv.ostukorviTooted) {
+        for (const item of order.ostukorv.ostukorviTooted) {
+          const product = await Toode.findByPk(item.ToodeID);
+          if (product) {
+            // Kontrolli, kas laoseis on piisav enne vähendamist
+            if (product.Laoseis < item.Kogus) {
+              return res.status(400).json({
+                error: `Ebapiisav kogus ${product.Nimi}. Saadaval: ${product.Laoseis}, Nõutud: ${item.Kogus}`
+              });
+            }
+            const newStock = Math.max(0, product.Laoseis - item.Kogus);
+            await product.update({ Laoseis: newStock });
+            console.log(`Vähendati kogust: ${product.Nimi}: -${item.Kogus} (Uus laoseis: ${newStock})`);
+          }
+        }
+      }
+    }
+
+    // Kui tellimuse staatus on 'Lõpetatud', siis kustuta Teenindaja kirje
+    if (staatus === 'Lõpetatud') {
+      try {
+        // Kustuta Teenindaja kirje, mis on seotud selle tellimusega
+        const deletedRows = await Teenindaja.destroy({
+          where: { TellimusID: id }
+        });
+        if (deletedRows > 0) {
+          console.log(`Teenindaja kirje kustutatud tellimuse ${id} jaoks`);
+        } else {
+          console.log(`Teenindaja kirjet ei leitud tellimuse ${id} jaoks`);
+        }
+
+        
+      } catch (teenindajaError) {
+        console.error('Error handling Teenindaja record:', teenindajaError);
+        
+      }
+    }
+
+    // Uuenda tellimuse staatus
+    order.Staatus = staatus;
+    console.log('All changed fields before save:', order.changed());
     await order.save();
 
-    res.status(200).json({ message: 'Order status updated successfully', order });
+    res.status(200).json({
+      message: 'Order status updated successfully',
+      order
+    });
+
   } catch (error) {
     console.error('Error updating order status:', error);
     res.status(500).json({ error: 'Failed to update order status.' });
   }
 };
 
-// User-specific orders
+// kasutaja saab oma ostukorvid
 exports.getUserCarts = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -164,7 +267,14 @@ exports.getUserCarts = async (req, res) => {
         },
         {
           model: Tellimus,
-          as: 'tellimus'  // Include the associated Tellimus
+          as: 'tellimus',  
+          include: [
+            {
+              model: Kuller,
+              as: 'kuller',
+              attributes: ['KullerID', 'Nimi', 'Telefoninumber']
+            }
+          ]
         }
       ],
       order: [['updatedAt', 'DESC']]
@@ -177,23 +287,35 @@ exports.getUserCarts = async (req, res) => {
   }
 };
 
-exports.getUnassignedOrders = async (req, res) => {
+
+exports.deleteOrder = async (req, res) => {
   try {
-    const orders = await Tellimus.findAll({
-      where: {
-        [Op.or]: [
-          { TeenindajaID: null },
-          { KullerID: null }
-        ],
-        Staatus: 'Pending'
-      }
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ error: 'TellimusID on nõutud' });
+    }
+
+    const order = await Tellimus.findByPk(id);
+    
+    if (!order) {
+      return res.status(404).json({ error: 'Tellimust ei leitud' });
+    }
+
+    // Samuti kustuta seotud ostukorv ja teenindaja
+    await Teenindaja.destroy({
+      where: { TellimusID: id }
     });
-    res.json(orders);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+
+    await order.destroy();
+
+    res.status(200).json({ 
+      message: 'Tellimus edukalt kustutatud',
+      deletedOrderId: id 
+    });
+
+  } catch (error) {
+    console.error('Delete order error:', error);
+    res.status(500).json({ error: 'Failed to delete order.', detail: error.message });
   }
 };
-
-
-
-

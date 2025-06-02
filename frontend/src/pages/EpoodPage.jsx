@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Search, ShoppingCart, Heart, Menu } from 'lucide-react';
 import axios from 'axios';
-import api from '../api'; // Import your configured Axios instance
+import api from '../api'; 
+import ProductCard from '../components/ProductCard'; 
 
 const EpoodPage = ({ loadCart }) => {
   const [products, setProducts] = useState([]);
@@ -11,12 +12,12 @@ const EpoodPage = ({ loadCart }) => {
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Kõik tooted');
-  const [sortBy, setSortBy] = useState('Nimi'); // Changed from 'Nimetus' to 'Nimi'
+  const [sortBy, setSortBy] = useState('Nimi'); 
   const [sortOrder, setSortOrder] = useState('ASC');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   
-  // Get unique categories from products
+  // Saad kategooriad unikaalsete toodete loendist
   const categories = ['Kõik tooted', ...new Set(originalProducts.map(p => p.Kategooria))];
 
   useEffect(() => {
@@ -27,7 +28,7 @@ const EpoodPage = ({ loadCart }) => {
     applyFilters();
   }, [searchQuery, selectedCategory, sortBy, sortOrder, originalProducts]);
 
-  // Load cart when component mounts
+  // Laeb ostukorvi, kui see on saadaval
   useEffect(() => {
     if (loadCart) {
       loadCart();
@@ -38,7 +39,6 @@ const EpoodPage = ({ loadCart }) => {
     try {
       setLoading(true);
       const res = await axios.get('http://localhost:3001/api/products');
-      console.log('Fetched products:', res.data); // Debug log
       setOriginalProducts(res.data);
       setProducts(res.data);
     } catch (err) {
@@ -63,7 +63,7 @@ const EpoodPage = ({ loadCart }) => {
       filtered = filtered.filter(p => p.Kategooria === selectedCategory);
     }
     
-    // Only filter products that are in stock
+    // Filtreeri välja tooted, mille laoseis on 0 või vähem
     filtered = filtered.filter(p => (p.Laoseis || 0) > 0);
     
     filtered.sort((a, b) => {
@@ -104,26 +104,10 @@ const EpoodPage = ({ loadCart }) => {
 
   const user = JSON.parse(localStorage.getItem('user'));
   
-  const addToCart = async (product) => {
-    console.log('Lisati ostukorvi:', product);
-    if (!user || !user.id) {
-      alert('Palun logi sisse, et lisada tooteid ostukorvi.');
-      return;
-    }
-    
-    try {
-      const response = await api.post('/cart', {
-        userId: user.id,
-        toodeId: product.ToodeID,
-        kogus: 1,
-      });
-      alert('Toode lisatud ostukorvi!');
-      if (loadCart) {
-        loadCart(); // Refresh cart after adding item
-      }
-    } catch (error) {
-      console.error('Error adding to cart:', error.response?.data || error.message);
-      alert('Toote lisamine ostukorvi ebaõnnestus.');
+  // Edukas ostukorvi lisamine
+  const handleAddToCartSuccess = () => {
+    if (loadCart) {
+      loadCart(); // Värskenda ostukorvi, kui see on saadaval
     }
   };
 
@@ -139,10 +123,9 @@ const EpoodPage = ({ loadCart }) => {
     );
   }
 
-
   return (
     <div className="min-vh-100 bg-light">
-      {/* Search and Category Filter */}
+      {/* Otsingu ja kategooria filter */}
       <div className="container py-3">
         <div className="row align-items-center">
           <div className="col-md-6">
@@ -165,12 +148,12 @@ const EpoodPage = ({ loadCart }) => {
             </form>
           </div>
           <div className="col-md-6 d-flex justify-content-end">
-            {/* Right-side spacing or future user menu */}
+            {/* Parempolne äär */}
           </div>
         </div>
       </div>
   
-      {/* Category Navigation */}
+      {/* Kategooria Nav */}
       <div className="bg-light border-top">
         <div className="container">
           <nav className="py-2">
@@ -190,7 +173,7 @@ const EpoodPage = ({ loadCart }) => {
                       Kõik tooted
                     </button>
                   </li>
-                  {categories.map((cat) => (
+                  {categories.filter(cat => cat !== 'Kõik tooted').map((cat) => (
                     <li key={cat}>
                       <button
                         className={`dropdown-item ${selectedCategory === cat ? 'active' : ''}`}
@@ -210,7 +193,7 @@ const EpoodPage = ({ loadCart }) => {
         </div>
       </div>
   
-      {/* Main Content */}
+      {/* Main  */}
       <main className="container py-4">
         {error && <div className="alert alert-danger">{error}</div>}
   
@@ -253,14 +236,11 @@ const EpoodPage = ({ loadCart }) => {
             ) : (
               products.map((product) => (
                 <div key={product.ToodeID} className="col-lg-3 col-md-4 col-sm-6">
-                  <div className="card h-100 shadow-sm position-relative">
-                    {product.Laoseis <= 5 && (
-                      <div className="position-absolute top-0 start-0 bg-warning text-dark px-2 py-1 rounded-end">
-                        <small>Vähe laos</small>
-                      </div>
-                    )}
+                  <div className="position-relative">
+                    {/* Lemmiku nupp */}
                     <button
                       className="btn btn-sm position-absolute top-0 end-0 m-2 border-0 bg-white rounded-circle shadow-sm"
+                      style={{ zIndex: 10 }}
                       onClick={() => toggleFavorite(product.ToodeID)}
                     >
                       <Heart
@@ -269,47 +249,20 @@ const EpoodPage = ({ loadCart }) => {
                         fill={favorites.includes(product.ToodeID) ? 'currentColor' : 'none'}
                       />
                     </button>
-                    <div className="d-flex justify-content-center align-items-center bg-light position-relative" style={{ height: '200px' }}>
-                            <img
-                              src={
-                                product.PiltUrl && product.PiltUrl.trim()
-                                  ? product.PiltUrl
-                                  : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PGNpcmNsZSBjeD0iNTAiIGN5PSI2MCIgcj0iMTAiIGZpbGw9IiNjY2MiLz48cGF0aCBkPSJNMzAgMTQwaDE0MGwtMzAtNDBMMTIwIDEyMGwtMjAgMjB6IiBmaWxsPSIjY2NjIi8+PC9zdmc+'
-                              }
-                              className="card-img-top"
-                              alt={
-                                product.PiltUrl && product.PiltUrl.trim()
-                                  ? (product.Nimi || 'Toode')
-                                  : 'Pilt' 
-                              }
-                              style={{
-                                maxHeight: '100%',
-                                maxWidth: '100%',
-                                objectFit: 'contain',
-                                position: 'absolute',
-                              }}
-                            />
-                          </div>
-                    <div className="card-body d-flex flex-column">
-                      <span className="badge bg-secondary mb-2 align-self-start">
-                        {product.Kategooria}
-                      </span>
-                      <h6 className="card-title">{product.Nimi}</h6>
-                      <div className="small text-muted mb-2">
-                        📍 {product.Asukoht} <span className="ms-2">📦 {product.Laoseis} tk</span>
+                    
+                    {/* Kui on madal laoseis */}
+                    {product.Laoseis <= 5 && (
+                      <div className="position-absolute top-0 start-0 bg-warning text-dark px-2 py-1 rounded-end" style={{ zIndex: 10 }}>
+                        <small>Vähe laos</small>
                       </div>
-                      <div className="mt-auto">
-                        <div className="h5 text-danger mb-2">{parseFloat(product.Hind).toFixed(2)}€</div>
-                        <button
-                          className="btn btn-primary w-100"
-                          onClick={() => addToCart(product)}
-                          disabled={product.Laoseis === 0}
-                        >
-                          <ShoppingCart size={16} className="me-2" />
-                          {product.Laoseis === 0 ? 'Otsas' : 'Lisa ostukorvi'}
-                        </button>
-                      </div>
-                    </div>
+                    )}
+                    
+                    {/* Toote kaardi komponent */}
+                    <ProductCard 
+                      product={product} 
+                      user={user} 
+                      onAddToCartSuccess={handleAddToCartSuccess}
+                    />
                   </div>
                 </div>
               ))
@@ -358,4 +311,5 @@ const EpoodPage = ({ loadCart }) => {
     </div>
   );
 }
+
 export default EpoodPage;

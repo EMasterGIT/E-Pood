@@ -18,11 +18,12 @@ import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 
 function App() {
   const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true); 
   const navigate = useNavigate();
   const location = useLocation();
   const [cartCount, setCartCount] = useState(0);
 
-  // Load user from localStorage on app start
+  // Laadimine kasutaja andmetest localStorage'ist
   useEffect(() => {
     const token = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
@@ -35,21 +36,20 @@ function App() {
         localStorage.removeItem('user');
       }
     }
+    setIsLoading(false); // Sea laadimine lõppenuks
   }, []);
 
   
 
-  // Update cart count based on cart items array
+  // Uupdate ostukorvi toodete arvu
   const updateCartCount = (cartItems) => {
-    console.log("Raw cart items in updateCartCount:", cartItems);
-    const count = cartItems.length; // count number of unique products
-    console.log("Cart count:", count);
+    const count = cartItems.length; // Ostukorvi toodete arv
     setCartCount(count);
   };
 
   // Load cart data for current user
   const loadCart = async () => {
-    if (!user || user.role === 'admin') return; // ⬅️ Skip loading for admin
+    if (!user || user.role === 'admin') return; // Jätab admini kasutajad välja ostukorvi laadimisest
   
     try {
       const response = await axios.get(`http://localhost:3001/api/cart/${user.id}`);
@@ -60,27 +60,36 @@ function App() {
     }
   };
 
-  // Reload cart whenever user changes (login/logout)
+  // Ostukorvi laadimine, kui kasutaja on olemas
   useEffect(() => {
     loadCart();
   }, [user]);
   
 
   const handleLogout = () => {
-    console.log('App.jsx: Initiating logout...');
+
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    setUser(null); // This sets user state to null
-    console.log('App.jsx: User state set to null. Navigating to /store.');
+    setUser(null); // Kasutaja eemaldamine olekust
     navigate('/store');
   };
 
-  // For debugging
-  console.log('App.jsx: Current user state:', user);
 
-  // PrivateRoute wrapper for protected routes
+  // PrivateRoute
   const PrivateRoute = ({ element, roles }) => {
-    console.log('PrivateRoute: Checking user:', user);
+    
+    
+    // Laadmise spinner
+    if (isLoading) {
+      return (
+        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '50vh' }}>
+          <div className="spinner-border text-danger" role="status">
+            <span className="visually-hidden">Laeb...</span>
+          </div>
+        </div>
+      );
+    }
+    
     if (!user) {
       console.log('PrivateRoute: User is null, redirecting to /user-login');
       return <Navigate to="/user-login" />;
@@ -92,9 +101,23 @@ function App() {
     return element;
   };
 
-  // Determine if current page is a login page (hide some UI elements)
+  // Kontrolli, kas oleme sisselogimislehel või administraatori vaade
   const isLoginPage = location.pathname === '/admin' || location.pathname === '/user-login';
   const isAdminDashboard = location.pathname === '/dashboard';
+
+  // Laadminine spinner
+  if (isLoading) {
+    return (
+      <div className="min-vh-100 bg-light d-flex justify-content-center align-items-center">
+        <div className="text-center">
+          <div className="spinner-border text-danger mb-3" role="status" style={{ width: '3rem', height: '3rem' }}>
+            <span className="visually-hidden">Laeb...</span>
+          </div>
+          <h5 className="text-muted">Laeb E-RIMI...</h5>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-vh-100 bg-light">

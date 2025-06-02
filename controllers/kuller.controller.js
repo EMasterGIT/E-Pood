@@ -21,7 +21,7 @@ exports.assignKuller = async (req, res) => {
       return res.status(400).json({ error: 'KullerID is required' });
     }
     
-    // Find the cart with its associated tellimus
+    // Leia ostukorv ID järgi
     const cart = await Ostukorv.findByPk(cartId, {
       include: [{
         model: Tellimus,
@@ -30,26 +30,26 @@ exports.assignKuller = async (req, res) => {
     });
     
     if (!cart) {
-      return res.status(404).json({ error: 'Cart not found' });
+      return res.status(404).json({ error: 'Ostukorvi ei leitud' });
     }
     
     let tellimus = cart.tellimus;
     
-    // Create tellimus if it doesn't exist
+    // Loo uus tellimus, kui seda pole olemas
     if (!tellimus) {
       tellimus = await Tellimus.create({
         KasutajaID: cart.KasutajaID,
         OstukorvID: cart.OstukorvID,
-        Staatus: 'Pending',
-        Asukoht: 'To be determined',
+        Staatus: 'Ootel',
+        Asukoht: 'Pole kinnitatud',
         KullerID: KullerID
       });
     } else {
-      // Update existing tellimus
+      // Uue tellimuse puhul, uuendame tellimuse KullerID
       await tellimus.update({ KullerID: KullerID });
     }
     
-    // Also update any existing Teenindaja records with the new KullerID
+    // Uue tellimuse puhul, uuendame ka Teenindaja tabelit
     await Teenindaja.update(
       { KullerID: KullerID },
       { where: { TellimusID: tellimus.TellimusID } }

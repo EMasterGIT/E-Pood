@@ -1,6 +1,27 @@
 const { Ostukorv, Teenindaja, Kuller, Tellimus, Toode, OstukorviToode } = require('../models');
 const { Op } = require('sequelize');
 
+// Helper function to check and clean up empty cart
+const checkAndCleanupEmptyCart = async (cartId) => {
+  try {
+    const remainingItems = await OstukorviToode.count({
+      where: { OstukorvID: cartId }
+    });
+    
+    if (remainingItems === 0) {
+      // No items left, delete the cart
+      await Ostukorv.destroy({
+        where: { OstukorvID: cartId }
+      });
+      return true; // Cart was deleted
+    }
+    return false; // Cart still has items
+  } catch (error) {
+    console.error('Error checking/cleaning empty cart:', error);
+    return false;
+  }
+};
+
 exports.addToCart = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -68,7 +89,11 @@ exports.addToCart = async (req, res) => {
 
 exports.getCart = async (req, res) => {
   try {
-    const userId = req.params.userId;
+    const userId = req.params.userId || req.user?.id;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID is required.' });
+    }
 
     const cart = await Ostukorv.findOne({
       where: {
@@ -82,21 +107,38 @@ exports.getCart = async (req, res) => {
         include: [{ 
           model: Toode, 
           as: 'toode',
-          attributes: ['ToodeID', 'Nimi', 'Hind', 'Laoseis'] // Changed from Kogus to Laoseis
+          attributes: ['ToodeID', 'Nimi', 'Hind', 'Laoseis'] 
         }],
         order: [['ToodeID', 'ASC']],
       }]
     });
   
     if (!cart) {
-      return res.status(404).json({ error: 'Cart not found.' });
+      return res.status(200).json({ 
+        message: 'No active cart found.',
+        cart: null,
+        ostukorviTooted: []
+      });
     }
+
+    // Check if cart is empty and clean up if necessary
+    if (!cart.ostukorviTooted || cart.ostukorviTooted.length === 0) {
+      await checkAndCleanupEmptyCart(cart.OstukorvID);
+      return res.status(200).json({ 
+        message: 'Cart was empty and has been cleaned up.',
+        cart: null,
+        ostukorviTooted: []
+      });
+    }
+
+    // Track items to remove (out of stock)
+    const itemsToRemove = [];
 
     // Update cart items with current prices and validate stock
     for (let item of cart.ostukorviTooted) {
       if (item.toode) {
         const currentPrice = parseFloat(item.toode.Hind);
-        const availableStock = item.toode.Laoseis; // Changed from Kogus to Laoseis
+        const availableStock = item.toode.Laoseis;
         
         // Update price if it has changed
         if (!isNaN(currentPrice) && currentPrice !== parseFloat(item.Hind)) {
@@ -110,10 +152,8 @@ exports.getCart = async (req, res) => {
         // Adjust quantity if stock is insufficient
         if (item.Kogus > availableStock) {
           if (availableStock === 0) {
-            // Remove item if no stock available
-            await OstukorviToode.destroy({
-              where: { OstukorvID: cart.OstukorvID, ToodeID: item.ToodeID }
-            });
+            // Mark item for removal if no stock available
+            itemsToRemove.push(item.ToodeID);
           } else {
             // Adjust quantity to available stock
             await OstukorviToode.update(
@@ -124,6 +164,27 @@ exports.getCart = async (req, res) => {
           }
         }
       }
+    }
+
+    // Remove out of stock items
+    if (itemsToRemove.length > 0) {
+      await OstukorviToode.destroy({
+        where: { 
+          OstukorvID: cart.OstukorvID, 
+          ToodeID: { [Op.in]: itemsToRemove }
+        }
+      });
+    }
+
+    // Check if cart is now empty after removals
+    const wasCartDeleted = await checkAndCleanupEmptyCart(cart.OstukorvID);
+    if (wasCartDeleted) {
+      return res.status(200).json({ 
+        message: 'Cart became empty after stock updates and has been cleaned up.',
+        cart: null,
+        ostukorviTooted: [],
+        removedItems: itemsToRemove
+      });
     }
 
     // Refetch cart with updated data
@@ -139,13 +200,16 @@ exports.getCart = async (req, res) => {
         include: [{ 
           model: Toode, 
           as: 'toode',
-          attributes: ['ToodeID', 'Nimi', 'Hind', 'Laoseis'] // Changed from Kogus to Laoseis
+          attributes: ['ToodeID', 'Nimi', 'Hind', 'Laoseis']
         }],
         order: [['ToodeID', 'ASC']],
       }]
     });
 
-    res.status(200).json(updatedCart);
+    res.status(200).json({
+      ...updatedCart.toJSON(),
+      removedItems: itemsToRemove.length > 0 ? itemsToRemove : undefined
+    });
   } catch (error) {
     console.error('Error fetching cart:', error);
     res.status(500).json({ error: 'Something went wrong while fetching the cart.' });
@@ -205,9 +269,23 @@ exports.remove = async (req, res) => {
 
     if (!cartItem) return res.status(404).json({ error: 'Item not found in cart.' });
 
+    // Remove the item
     await cartItem.destroy();
 
-    res.status(200).json({ message: 'Product removed from cart.' });
+    // Check if cart is now empty and clean up if necessary
+    const wasCartDeleted = await checkAndCleanupEmptyCart(cart.OstukorvID);
+
+    if (wasCartDeleted) {
+      res.status(200).json({ 
+        message: 'Product removed from cart. Cart was empty and has been cleaned up.',
+        cartDeleted: true
+      });
+    } else {
+      res.status(200).json({ 
+        message: 'Product removed from cart.',
+        cartDeleted: false
+      });
+    }
 
   } catch (error) {
     console.error('Remove from cart error:', error);
@@ -233,8 +311,8 @@ exports.clearUserCart = async (req, res) => {
     for (const item of cart.ostukorviTooted) {
       const product = await Toode.findByPk(item.ToodeID);
       if (product) {
-        const newStock = Math.max(0, product.Laoseis - item.Kogus); // Changed from Kogus to Laoseis
-        await product.update({ Laoseis: newStock }); // Changed from Kogus to Laoseis
+        const newStock = Math.max(0, product.Laoseis - item.Kogus);
+        await product.update({ Laoseis: newStock });
       }
     }
 

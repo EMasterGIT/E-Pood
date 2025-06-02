@@ -1,22 +1,22 @@
 // Favorites.jsx
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Heart, ShoppingCart } from 'lucide-react'; // For consistency with EpoodPage icons
+import { Heart, ShoppingCart } from 'lucide-react'; // Ikoonid lemmikute ja ostukorvi jaoks
 
 export default function Favorites() {
-  const [favoriteProductIds, setFavoriteProductIds] = useState([]); // Stores just the IDs from localStorage
-  const [favoriteProducts, setFavoriteProducts] = useState([]); // Stores full product objects
+  const [favoriteProductIds, setFavoriteProductIds] = useState([]); // Hoiab ainult lemmikute ID-sid
+  const [favoriteProducts, setFavoriteProducts] = useState([]); // Hoaib täielikke lemmiktooteid
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [cartItemsCount, setCartItemsCount] = useState(0); // To update cart count if adding from favorites
+  const [addingToCart, setAddingToCart] = useState({}); // Jälgib, kas toode on lisamisel ostukorvi
 
-  // Load favorite IDs from localStorage on mount
+  // Lae lemmikute ID-d kohalikust salvestusest
   useEffect(() => {
     const storedIds = JSON.parse(localStorage.getItem('favorites')) || [];
     setFavoriteProductIds(storedIds);
   }, []);
 
-  // Fetch full product details once favorite IDs are loaded or change
+  // Peamine lemmiktoodete üksikasjade laadimine
   useEffect(() => {
     const fetchFavoriteProductDetails = async () => {
       if (favoriteProductIds.length === 0) {
@@ -26,9 +26,8 @@ export default function Favorites() {
       }
       try {
         setLoading(true);
-        // Assuming your backend has an endpoint to fetch products by ID or a list of IDs
-        // For simplicity, we'll fetch all products and filter. A better way is a dedicated backend endpoint.
-        const response = await axios.get('http://localhost:3001/api/products'); // Fetch all products
+        
+        const response = await axios.get('http://localhost:3001/api/products'); 
         const allProducts = response.data;
         
         const filteredFavorites = allProducts.filter(product =>
@@ -37,49 +36,83 @@ export default function Favorites() {
         setFavoriteProducts(filteredFavorites);
         setError('');
       } catch (err) {
-        console.error('Error fetching favorite product details:', err);
-        setError('Failed to load favorite product details.');
+        console.error('Error lemmikute toodete kättesaamisel', err);
+        setError('Lemmikute laadimine nurjus. Palun proovi hiljem uuesti.');
       } finally {
         setLoading(false);
       }
     };
 
     fetchFavoriteProductDetails();
-  }, [favoriteProductIds]); // Rerun when favorite IDs change
+  }, [favoriteProductIds]); 
 
-  // Function to remove from favorites (consistent with EpoodPage)
+  // Funktsioon lemmikute eemaldamiseks
   const removeFromFavorites = (productId) => {
     setFavoriteProductIds(prev => {
       const updatedIds = prev.filter(id => id !== productId);
       localStorage.setItem('favorites', JSON.stringify(updatedIds));
       return updatedIds;
     });
-    // Also update the displayed products immediately
+    // Uuenda kuvatud lemmikute nimekiri
     setFavoriteProducts(prev => prev.filter(product => product.ToodeID !== productId));
   };
 
-  const addToCart = (product) => {
+  // Funktsioon toote lisamiseks ostukorvi
+  const addToCart = async (product) => {
     try {
-      const storedCart = JSON.parse(localStorage.getItem('cart')) || [];
-      const updatedCart = [...storedCart, product];
-      localStorage.setItem('cart', JSON.stringify(updatedCart));
-      setCartItemsCount(updatedCart.length); // Update count
-      alert(`${product.Nimetus} added to cart!`);
+      setAddingToCart(prev => ({ ...prev, [product.ToodeID]: true }));
+      
+      // Kontrolli, kas kasutaja on sisse logitud
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      
+      if (!token) {
+        alert('Palun logi sisse, et tooteid ostukorvi lisada.');
+        return;
+      }
+
+      const response = await axios.post(
+        'http://localhost:3001/api/cart',
+        {
+          toodeId: product.ToodeID,
+          kogus: 1 
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (response.status === 201) {
+        alert(`${product.Nimi} lisati ostukorvi!`);
+        
+        
+      }
     } catch (err) {
-      console.error('Error adding to cart:', err);
-      alert('Failed to add product to cart.');
+      console.error('Error ostukorvi lisamisel:', err);
+      
+      if (err.response?.status === 401) {
+        alert('Palun logi sisse, et tooteid ostukorvi lisada.');
+      } else if (err.response?.status === 400) {
+        alert(err.response.data.error || 'Toote lisamine ostukorvi ebaõnnestus.');
+      } else {
+        alert('Toote lisamine ostukorvi ebaõnnestus. Palun proovi hiljem uuesti.');
+      }
+    } finally {
+      setAddingToCart(prev => ({ ...prev, [product.ToodeID]: false }));
     }
   };
 
   return (
     <div className="container mt-4">
-      <h2>Your Favorites</h2> {/* Changed title */}
+      <h2>Lemmikud</h2> 
       {loading && (
         <div className="text-center py-5">
           <div className="spinner-border text-primary" role="status">
-            <span className="visually-hidden">Loading...</span>
+            <span className="visually-hidden">Laen</span>
           </div>
-          <p className="mt-2">Loading favorites...</p>
+          <p className="mt-2">Laen lemmikuid</p>
         </div>
       )}
       {error && (
@@ -89,7 +122,7 @@ export default function Favorites() {
       )}
 
       {!loading && favoriteProducts.length === 0 ? (
-        <p>You have no favorite products yet.</p>
+        <p>Sul pole lemmikuid veel</p>
       ) : (
         <div className="row g-4">
           {favoriteProducts.map((product) => (
@@ -101,21 +134,25 @@ export default function Favorites() {
                 >
                   <Heart
                     size={20}
-                    className="text-danger" // Always show as filled/red in favorites page
+                    className="text-danger" 
                     fill="currentColor"
                   />
                 </button>
 
                 <div className="d-flex justify-content-center align-items-center bg-light">
-                  <img
+                <img
                     src={
-                      product.Pilt
-                        ? `http://localhost:3001/${product.Pilt}`
-                        : '/uploads/placeholder.jpg'
+                      product.PiltUrl && product.PiltUrl.trim()
+                        ? product.PiltUrl
+                        : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PGNpcmNsZSBjeD0iNTAiIGN5PSI2MCIgcj0iMTAiIGZpbGw9IiNjY2MiLz48cGF0aCBkPSJNMzAgMTQwaDE0MGwtMzAtNDBMMTIwIDEyMGwtMjAgMjB6IiBmaWxsPSIjY2NjIi8+PC9zdmc+'
                     }
-                    alt={product.Nimetus}
-                    className="img-fluid"
-                    style={{ height: '200px', objectFit: 'contain' }}
+                    
+                    alt={
+                      product.PiltUrl && product.PiltUrl.trim()
+                        ? (product.Nimi || 'Toode')
+                        : 'Pilt' 
+                    }
+                    
                   />
                 </div>
 
@@ -123,24 +160,29 @@ export default function Favorites() {
                   <span className="badge bg-secondary mb-2 align-self-start">
                     {product.Kategooria}
                   </span>
-                  <h6 className="card-title">{product.Nimetus}</h6>
+                  <h6 className="card-title">{product.Nimi}</h6>
                   <div className="small text-muted mb-2">
                     <span>📍 {product.Asukoht}</span>
-                    <span className="ms-2">📦 {product.Kogus} tk laos</span>
+                    <span className="ms-2">📦 {product.Laoseis} tk laos</span>
                   </div>
                   <div className="mt-auto">
                     <div className="d-flex align-items-center mb-2">
                       <span className="h5 text-danger mb-0">
-                        {parseFloat(product.Hind).toFixed(2)}€
+                        {parseFloat(product.Hind || 0).toFixed(2)}€
                       </span>
                     </div>
                     <button
                       className="btn btn-primary w-100"
                       onClick={() => addToCart(product)}
-                      disabled={product.Kogus === 0}
+                      disabled={product.Laoseis === 0 || addingToCart[product.ToodeID]}
                     >
                       <ShoppingCart size={16} className="me-2" />
-                      {product.Kogus === 0 ? 'Otsas' : 'Add to Cart'}
+                      {addingToCart[product.ToodeID] 
+                        ? 'Lisan...' 
+                        : product.Laoseis === 0 
+                          ? 'Otsas' 
+                          : 'Lisa ostukorvi'
+                      }
                     </button>
                   </div>
                 </div>

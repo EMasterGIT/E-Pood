@@ -2,39 +2,39 @@
 
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { Kasutaja, Sequelize } = require('../models'); // <--- CORRECTED: Changed 'kasutaja' to 'Kasutaja'
+const { Kasutaja, Sequelize } = require('../models'); 
 
 exports.register = async (req, res) => {
   try {
     const { Nimi, Email, Telefoninumber, Parool, Roll } = req.body;
 
-    // Basic validation
+    // Põhiline valideerimine
     if (!Nimi || !Email || !Parool) {
-      return res.status(400).json({ error: 'Name, Email, and Password are required.' });
+      return res.status(400).json({ error: 'Nimi, Email ja Parool on kohustuslikud.' });
     }
-    if (Roll && !['user', 'admin', 'kuller'].includes(Roll)) { // Example roles
-      return res.status(400).json({ error: 'Invalid role specified.' });
+    if (Roll && !['user', 'admin', 'kuller'].includes(Roll)) { // Näiteks rollid
+      return res.status(400).json({ error: 'Määratud roll on vigane.' });
     }
 
-    // Check if user already exists
-    const existingUser = await Kasutaja.findOne({ where: { Email: Email } }); // <--- Uses Kasutaja
+    // Kontrolli, kas kasutaja juba eksisteerib
+    const existingUser = await Kasutaja.findOne({ where: { Email: Email } }); // <--- Kasutab Kasutaja
     if (existingUser) {
-      return res.status(409).json({ error: 'User with this email already exists.' });
+      return res.status(409).json({ error: 'Selle e-mailiga kasutaja juba eksisteerib.' });
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(Parool, 10); // Salt rounds
+    // Parooli räsi loomine
+    const hashedPassword = await bcrypt.hash(Parool, 10); 
 
-    // Create user
-    const newUser = await Kasutaja.create({ // <--- Uses Kasutaja
+    // Kasutaja loomine
+    const newUser = await Kasutaja.create({ // <--- Kasutab Kasutaja
       Nimi,
       Email,
       Telefoninumber,
       Parool: hashedPassword,
-      Roll: Roll || 'user' // Default to 'user' if not provided
+      Roll: Roll || 'user' // Vaikimisi 'user', kui pole määratud
     });
 
-    // Optionally, generate a token immediately after registration
+    // Valikuline: loo token kohe pärast registreerimist
     const token = jwt.sign(
       { id: newUser.KasutajaID, email: newUser.Email, roll: newUser.Roll },
       process.env.JWT_SECRET,
@@ -42,7 +42,7 @@ exports.register = async (req, res) => {
     );
 
     res.status(201).json({
-      message: 'Registration successful',
+      message: 'Registreerimine õnnestus',
       token,
       user: {
         id: newUser.KasutajaID,
@@ -53,18 +53,18 @@ exports.register = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Registration error:', error);
-    res.status(500).json({ error: 'Server error during registration', detail: error.message });
+    console.error('Registreerimise viga:', error);
+    res.status(500).json({ error: 'Serveri viga registreerimise ajal', detail: error.message });
   }
 };
 
 exports.login = async (req, res) => {
-  console.log('--- LOGIN ATTEMPT RECEIVED ---');
+  console.log('--- SISSELOGIMISE KATSE ---');
   try {
     const { EmailOrName, Parool } = req.body;
-    console.log('Login attempt for:', EmailOrName);
+    console.log('Sisselogimise katse:', EmailOrName);
 
-    const user = await Kasutaja.findOne({ // <--- CORRECTED: Uses Kasutaja
+    const user = await Kasutaja.findOne({ 
       where: {
         [Sequelize.Op.or]: [
           { Email: EmailOrName },
@@ -74,14 +74,14 @@ exports.login = async (req, res) => {
     });
 
     if (!user) {
-      console.log('Login failed: User not found');
-      return res.status(401).json({ error: 'Invalid credentials' });
+      console.log('Sisselogimine ebaõnnestus: Kasutajat ei leitud');
+      return res.status(401).json({ error: 'Vale kasutajatunnus või parool' });
     }
 
     const isMatch = await bcrypt.compare(Parool, user.Parool);
     if (!isMatch) {
-      console.log('Login failed: Password mismatch');
-      return res.status(401).json({ error: 'Invalid credentials' });
+      console.log('Sisselogimine ebaõnnestus: Parool ei klapi');
+      return res.status(401).json({ error: 'Vale kasutajatunnus või parool' });
     }
 
     console.log('JWT_SECRET (Login FN):', process.env.JWT_SECRET);
@@ -90,10 +90,10 @@ exports.login = async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
-    console.log('Login successful: Token generated.');
+    console.log('Sisselogimine õnnestus: Token loodud.');
 
     return res.json({
-      message: 'Login successful',
+      message: 'Sisselogimine õnnestus',
       token,
       user: {
         id: user.KasutajaID,
@@ -104,7 +104,7 @@ exports.login = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Login error in catch block:', error);
-    return res.status(500).json({ error: 'Server error during login', detail: error.message }); // Added detail for debugging
+    console.error('Sisselogimise viga (catch plokk):', error);
+    return res.status(500).json({ error: 'Serveri viga sisselogimise ajal', detail: error.message }); // Lisatud detailid silumiseks
   }
 };

@@ -29,7 +29,7 @@ function AdminDashboard() {
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
 
-  // Load all products
+  // Lae tooted
   useEffect(() => {
     (async () => {
       try {
@@ -41,7 +41,7 @@ function AdminDashboard() {
     })();
   }, []);
 
-  // Load tellimused with optional status filter
+  // Lae tellimused filtriga või ilma
   useEffect(() => {
     (async () => {
       try {
@@ -55,8 +55,8 @@ function AdminDashboard() {
         setTellimused(res.data);
         setStatusError('');
       } catch (err) {
-        setStatusError('Failed to load orders');
-        console.error('Error loading tellimused:', err);
+        setStatusError('Toodete laadimine nurjus');
+        console.error('Viga toodete laadimisel:', err);
       }
     })();
   }, [statusFilter, token]);
@@ -75,19 +75,19 @@ function AdminDashboard() {
       );
       setStatusError('');
     } catch (err) {
-      setStatusError('Failed to update order status');
-      console.error('Error updating status:', err);
+      setStatusError('Toote uuendamine nurjus');
+      console.error('Error toote uuendamisel', err);
     }
   };
 
   const handleDeleteTellimus = async (tellimusId) => {
-    if (!window.confirm('Are you sure you want to delete this order? This action cannot be undone.')) {
+    if (!window.confirm('Olete kindel, et soovite selle tellimuse kustutada?')) {
       return;
     }
 
     try {
       await axios.delete(
-        `http://localhost:3001/api/tellimus/admin/${tellimusId}`,
+        `http://localhost:3001/api/orders/${tellimusId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
@@ -95,8 +95,8 @@ function AdminDashboard() {
       setTellimused(prev => prev.filter(t => t.TellimusID !== tellimusId));
       setStatusError('');
     } catch (err) {
-      setStatusError('Failed to delete order');
-      console.error('Error deleting tellimus:', err);
+      setStatusError('Toote kustutamine nurjus');
+      console.error('Error toote lisamisel:', err);
     }
   };
 
@@ -149,8 +149,8 @@ function AdminDashboard() {
       setNewProductImage(null);
       setImagePreview(null);
     } catch (err) {
-      console.error('Add product error:', err.response?.data || err.message);
-      setError(err.response?.data?.error || 'Failed to add product');
+      console.error('Error uue toote lisamisel:', err.response?.data || err.message);
+      setError(err.response?.data?.error || 'Uue toote lisamine nurjus');
     }
   };
 
@@ -208,7 +208,7 @@ function AdminDashboard() {
       );
       setProducts(prev => prev.filter(p => p.ToodeID !== toodeID));
     } catch (err) {
-      setError('Failed to delete product');
+      setError('Toote kustutamine nurjus');
     }
   };
 
@@ -227,11 +227,11 @@ function AdminDashboard() {
 
   return (
     <div className="container mt-3">
-      <h2>Admin Dashboard - Products & Orders Management</h2>
+      <h2>Admin Dashboard - Toote & Tellimuse haldus</h2>
       {error && <div className="alert alert-danger">{error}</div>}
 
       <form onSubmit={handleAddProduct} className="mb-4">
-        <h4>Add New Product</h4>
+        <h4>Lisa uus toode</h4>
         <input
           type="text"
           placeholder="Nimi"
@@ -287,10 +287,10 @@ function AdminDashboard() {
             style={{ maxWidth: '150px', marginBottom: '10px' }}
           />
         )}
-        <button type="submit" className="btn btn-primary">Add Product</button>
+        <button type="submit" className="btn btn-primary">Lisa</button>
       </form>
 
-      <h4>Existing Products</h4>
+      <h4>Olemasolevad tooted</h4>
       <table className="table table-striped">
         <thead>
           <tr>
@@ -375,8 +375,8 @@ function AdminDashboard() {
                     />
                   </td>
                   <td>
-                    <button className="btn btn-success me-1" onClick={handleSaveClick}>Save</button>
-                    <button className="btn btn-secondary" onClick={handleCancelClick}>Cancel</button>
+                    <button className="btn btn-success me-1" onClick={handleSaveClick}>Salvesta</button>
+                    <button className="btn btn-secondary" onClick={handleCancelClick}>Tühista</button>
                   </td>
                 </>
               ) : (
@@ -400,13 +400,13 @@ function AdminDashboard() {
                       className="btn btn-primary me-1"
                       onClick={() => handleEditClick(p)}
                     >
-                      Edit
+                      Muuda
                     </button>
                     <button
                       className="btn btn-danger"
                       onClick={() => handleDeleteProduct(p.ToodeID)}
                     >
-                      Delete
+                      Kustuta
                     </button>
                   </td>
                 </>
@@ -417,17 +417,17 @@ function AdminDashboard() {
       </table>
 
       <hr />
-      <h3>Order Management (Tellimus)</h3>
+      <h3>Tellimuste haldus (Tellimus)</h3>
       <button
         className="btn btn-outline-primary mb-2"
         onClick={() => setShowFilter(!showFilter)}
       >
-        {showFilter ? 'Hide Filters' : 'Show Filters'}
+        {showFilter ? 'Peida Filter' : 'Näita Filter'}
       </button>
       {showFilter && (
         <div className="mb-3">
           <label htmlFor="statusFilter" className="form-label">
-            Filter by Status
+            Filtreeri staatuse järgi:
           </label>
           <select
             id="statusFilter"
@@ -435,7 +435,7 @@ function AdminDashboard() {
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
-            <option value="">All</option>
+            <option value="">Kõik</option>
             {tellimusStatuses.map(status => (
               <option key={status} value={status}>{status}</option>
             ))}
@@ -445,13 +445,13 @@ function AdminDashboard() {
       <table className="table table-bordered">
         <thead>
           <tr>
-            <th>Order ID</th>
-            <th>Customer</th>
-            <th>Location</th>
-            <th>Status</th>
-            <th>Total</th>
-            <th>Created</th>
-            <th>Actions</th>
+            <th>Tellimuse ID</th>
+            <th>Klient</th>
+            <th>Kuhu</th>
+            <th>Staatus</th>
+            <th>Maksumus kokku</th>
+            <th>Loodud</th>
+            <th>Tegevused</th>
           </tr>
         </thead>
         <tbody>
@@ -480,7 +480,7 @@ function AdminDashboard() {
                     onChange={(e) => handleStatusChange(tellimus.TellimusID, e.target.value)}
                     className="form-select"
                   >
-                    <option value="">Select Status</option>
+                    <option value="">Vali staatus</option>
                     {tellimusStatuses.map(status => (
                       <option key={status} value={status}>{status}</option>
                     ))}
@@ -493,7 +493,7 @@ function AdminDashboard() {
                     className="btn btn-danger btn-sm"
                     onClick={() => handleDeleteTellimus(tellimus.TellimusID)}
                   >
-                    Delete
+                    Kustuta
                   </button>
                 </td>
               </tr>
@@ -501,17 +501,17 @@ function AdminDashboard() {
                 <tr>
                   <td colSpan="7" className="p-0">
                     <div className="bg-light p-3">
-                      <h6>Order Items:</h6>
+                      <h6>Ostukorvi tooted:</h6>
                       {tellimus.ostukorv.ostukorviTooted && tellimus.ostukorv.ostukorviTooted.length > 0 ? (
                         <table className="table table-sm table-striped mb-0">
                           <thead>
                             <tr>
-                              <th>Image</th>
-                              <th>Product</th>
-                              <th>Category</th>
-                              <th>Unit Price</th>
-                              <th>Quantity</th>
-                              <th>Total</th>
+                              <th>Pilt</th>
+                              <th>Toode</th>
+                              <th>Kategooria</th>
+                              <th>Toote hind</th>
+                              <th>Kogus</th>
+                              <th>Kokku</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -527,7 +527,7 @@ function AdminDashboard() {
                                   )}
                                 </td>
                                 <td>
-                                  <strong>{item.toode?.Nimi || 'Unknown Product'}</strong>
+                                  <strong>{item.toode?.Nimi || 'Tundmatu toode'}</strong>
                                   <br />
                                   <small className="text-muted">{item.toode?.Kirjeldus}</small>
                                 </td>
@@ -540,7 +540,7 @@ function AdminDashboard() {
                           </tbody>
                         </table>
                       ) : (
-                        <p className="text-muted mb-0">No items found in this order.</p>
+                        <p className="text-muted mb-0">Tooted puuduvad</p>
                       )}
                     </div>
                   </td>

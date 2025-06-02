@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-// Accept setUser as a prop
+// Sisselogimise leht, mis kontrollib kasutaja rolli ja suunab administraatori paneelile
 function Login({ setUser }) {
   const navigate = useNavigate();
 
@@ -11,7 +11,7 @@ function Login({ setUser }) {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // This useEffect can stay, it handles cases where the user is *already* logged in as admin on initial component load.
+  // See kontrollib, kas kasutaja on juba sisse logitud ja suunab teda dashboardi, kui ta on administraator
   useEffect(() => {
     const token = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
@@ -22,7 +22,7 @@ function Login({ setUser }) {
           navigate('/dashboard');
         }
       } catch (e) {
-        console.error("Failed to parse user from localStorage:", e);
+        console.error("Ebaõnnestus saada token", e);
         localStorage.removeItem('token');
         localStorage.removeItem('user');
       }
@@ -58,13 +58,12 @@ function Login({ setUser }) {
         role: data.user.role
       };
 
-      // Store in localStorage
+      // Salvesta token ja kasutaja andmed kohalikku salvestusse
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(loggedInUser));
 
-      // **THE FINAL FIX HERE:**
-      // Update the global user state in App.jsx directly
-      setUser(loggedInUser); // <--- Call the prop function to update App.jsx's state
+      
+      setUser(loggedInUser); // Uuenda App.jsx state
 
       if (loggedInUser.role === 'admin') {
         navigate('/dashboard');
@@ -72,12 +71,12 @@ function Login({ setUser }) {
         setError('Access denied: this login is for administrators only.');
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        setUser(null); // Clear App.jsx state if login is not admin
+        setUser(null); // Puhasta kasutaja olek
       }
 
     } catch (err) {
       console.error('Login request failed or parse error:', err);
-      setError('Server error - please try again later');
+      setError('Server error - proovi hiljem uuesti.');
     } finally {
       setIsLoading(false);
     }
@@ -95,11 +94,11 @@ function Login({ setUser }) {
                   <div className="mb-3">
                     <i className="bi bi-shield-lock text-primary" style={{ fontSize: '3rem' }}></i>
                   </div>
-                  <h2 className="card-title text-center mb-2">Admin Login</h2>
-                  <p className="text-muted">Sign in to access the admin dashboard</p>
+                  <h2 className="card-title text-center mb-2">Admin Sisselogimine</h2>
+                  <p className="text-muted">Logi Admin paneeli sisse</p>
                 </div>
 
-                {/* Error Alert */}
+                {/* Veateavitus */}
                 {error && (
                   <div className="alert alert-danger alert-dismissible fade show" role="alert">
                     <i className="bi bi-exclamation-triangle-fill me-2"></i>
@@ -113,18 +112,18 @@ function Login({ setUser }) {
                   </div>
                 )}
 
-                {/* Login Form */}
+                {/* Login vorm */}
                 <form onSubmit={handleLogin}>
                   <div className="mb-3">
                     <label htmlFor="emailOrName" className="form-label">
                       <i className="bi bi-person-fill me-2"></i>
-                      Email or Username
+                      Email või Kasutajanimi
                     </label>
                     <input
                       type="text"
                       className="form-control form-control-lg"
                       id="emailOrName"
-                      placeholder="Enter your email or username"
+                      placeholder="Email või Kasutajanimi"
                       value={emailOrName}
                       onChange={(e) => setEmailOrName(e.target.value)}
                       required
@@ -135,13 +134,13 @@ function Login({ setUser }) {
                   <div className="mb-4">
                     <label htmlFor="password" className="form-label">
                       <i className="bi bi-lock-fill me-2"></i>
-                      Password
+                      Parool
                     </label>
                     <input
                       type="password"
                       className="form-control form-control-lg"
                       id="password"
-                      placeholder="Enter your password"
+                      placeholder="Sisesta oma parool"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
@@ -158,12 +157,12 @@ function Login({ setUser }) {
                       {isLoading ? (
                         <>
                           <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                          Signing in...
+                          Login sisse...
                         </>
                       ) : (
                         <>
                           <i className="bi bi-box-arrow-in-right me-2"></i>
-                          Sign In
+                          Logi sisse
                         </>
                       )}
                     </button>
@@ -174,7 +173,7 @@ function Login({ setUser }) {
                 <div className="text-center mt-4">
                   <small className="text-muted">
                     <i className="bi bi-info-circle me-1"></i>
-                    Admin access only
+                    Admin ligipääs ainut!
                   </small>
                 </div>
               </div>

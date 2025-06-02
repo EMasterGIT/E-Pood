@@ -137,9 +137,9 @@ export default function UserLogin({ setUser }) {
                     <p className="text-muted mb-1">
                       Don't have an account? <a href="/register">Sign Up</a>
                     </p>
-                    {/* NEW BUTTON: Continue to Store */}
+                    
                     <button
-                      type="button" // Use type="button" to prevent accidental form submission
+                      type="button" 
                       className="btn btn-link mt-2"
                       onClick={() => navigate('/store')}
                     >

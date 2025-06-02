@@ -8,6 +8,7 @@ module.exports = (sequelize, DataTypes) => {
       // Define associations here.
       Tellimus.belongsTo(models.Kasutaja, { foreignKey: 'KasutajaID', as: 'kasutaja' });
       Tellimus.belongsTo(models.Ostukorv, { foreignKey: 'OstukorvID', as: 'ostukorv' });
+      Tellimus.belongsTo(models.Kuller, { foreignKey: 'KullerID', as: 'kuller' });
       // Tellimus.belongsTo(models.Kuller, { foreignKey: 'KullerID', as: 'kuller' }); // Re-enable if you have a Kuller model
 
       // REMOVED: Tellimus.hasMany(models.TellimuseToode, ...)
