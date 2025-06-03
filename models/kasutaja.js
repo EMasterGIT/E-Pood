@@ -7,7 +7,7 @@ module.exports = (sequelize) => {
     static associate(models) {
       Kasutaja.hasMany(models.Ostukorv, { foreignKey: 'KasutajaID' });
       Kasutaja.hasMany(models.Tellimus, { foreignKey: 'KasutajaID' });
-      // Add any other Kasutaja associations here
+      
     }
   }
 
@@ -42,9 +42,9 @@ module.exports = (sequelize) => {
     },
     {
       sequelize,
-      modelName: 'Kasutaja', // MUST be PascalCase
-      tableName: 'Kasutaja', // MUST be PascalCase and match 'model' in other references
-      freezeTableName: true, // IMPORTANT: ensures tableName is used exactly
+      modelName: 'Kasutaja', 
+      tableName: 'Kasutaja', 
+      freezeTableName: true, 
       timestamps: true
     }
   );

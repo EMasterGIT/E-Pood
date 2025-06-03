@@ -116,7 +116,7 @@ const EpoodPage = ({ loadCart }) => {
       <div className="container mt-4">
         <div className="text-center">
           <div className="spinner-border" role="status">
-            <span className="visually-hidden">Loading...</span>
+            <span className="visually-hidden">Laeb...</span>
           </div>
         </div>
       </div>

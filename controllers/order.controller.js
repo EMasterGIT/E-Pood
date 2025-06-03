@@ -17,7 +17,7 @@ exports.createOrder = async (req, res) => {
     const userId = req.user.id;
 
     if (!ostukorvId || !location) {
-      return res.status(400).json({ error: 'Cart ID and delivery location are required.' });
+      return res.status(400).json({ error: 'Asukoht on vaja sisestada' });
     }
 
     // Tuvastakse, kas kasutajal on aktiivne ostukorv
@@ -35,22 +35,22 @@ exports.createOrder = async (req, res) => {
     });
 
     if (!cart) {
-      return res.status(404).json({ error: 'Active cart not found.' });
+      return res.status(404).json({ error: 'Aktiivset ostukorvi ei leitud' });
     }
 
     if (!cart.ostukorviTooted || cart.ostukorviTooted.length === 0) {
-      return res.status(400).json({ error: 'Cart is empty.' });
+      return res.status(400).json({ error: 'Ostukorv on tühi' });
     }
 
     // Laoseisu kontrollimine
     for (const item of cart.ostukorviTooted) {
       const product = await Toode.findByPk(item.ToodeID);
       if (!product) {
-        return res.status(400).json({ error: `Product ${item.ToodeID} not found.` });
+        return res.status(400).json({ error: `Toodet ${item.ToodeID} ei leitud.` });
       }
       if (product.Kogus < item.Kogus) {
         return res.status(400).json({ 
-          error: `Insufficient stock for ${product.Nimi}. Available: ${product.Kogus}, Requested: ${item.Kogus}` 
+          error: `Ebapiisav kogus ${product.Nimi}. Saadaval: ${product.Kogus}, Nõutud: ${item.Kogus}` 
         });
       }
     }
@@ -69,7 +69,7 @@ exports.createOrder = async (req, res) => {
 
     // Automaatiliselt loo Teenindaja
     const teenindaja = await Teenindaja.create({
-      Nimi: `Teenindaja for Order ${order.TellimusID}`,
+      Nimi: `Teenindaja tellimuse jaoks ${order.TellimusID}`,
       TellimusID: order.TellimusID,
       KullerID: assignedKuller.KullerID
     });
@@ -96,7 +96,7 @@ exports.createOrder = async (req, res) => {
 
   } catch (error) {
     console.error('Create order error:', error);
-    res.status(500).json({ error: 'Failed to create order.', detail: error.message });
+    res.status(500).json({ error: 'Tellimuse loomine nurjus', detail: error.message });
   }
 };
 

@@ -92,7 +92,7 @@ exports.getCart = async (req, res) => {
     const userId = req.params.userId || req.user?.id;
 
     if (!userId) {
-      return res.status(400).json({ error: 'User ID is required.' });
+      return res.status(400).json({ error: 'Kasutaja ID on nõutud' });
     }
 
     const cart = await Ostukorv.findOne({
@@ -115,13 +115,13 @@ exports.getCart = async (req, res) => {
   
     if (!cart) {
       return res.status(200).json({ 
-        message: 'No active cart found.',
+        message: 'Aktiivset ostukorvi ei leitud.',
         cart: null,
         ostukorviTooted: []
       });
     }
 
-    // Check if cart is empty and clean up if necessary
+    // Kontrolli kas ostukorvis on tooteid
     if (!cart.ostukorviTooted || cart.ostukorviTooted.length === 0) {
       await checkAndCleanupEmptyCart(cart.OstukorvID);
       return res.status(200).json({ 
@@ -134,13 +134,13 @@ exports.getCart = async (req, res) => {
     // Track items to remove (out of stock)
     const itemsToRemove = [];
 
-    // Update cart items with current prices and validate stock
+    // Uuenda ostukorvi tooteid vastavalt laoseisule
     for (let item of cart.ostukorviTooted) {
       if (item.toode) {
         const currentPrice = parseFloat(item.toode.Hind);
         const availableStock = item.toode.Laoseis;
         
-        // Update price if it has changed
+        // Uuenda toote hinda, kui see on muutunud
         if (!isNaN(currentPrice) && currentPrice !== parseFloat(item.Hind)) {
           await OstukorviToode.update(
             { Hind: currentPrice },
@@ -149,13 +149,13 @@ exports.getCart = async (req, res) => {
           item.Hind = currentPrice.toString();
         }
         
-        // Adjust quantity if stock is insufficient
+        // Sea kogus vastavaks laoseisule
         if (item.Kogus > availableStock) {
           if (availableStock === 0) {
-            // Mark item for removal if no stock available
+            // Kui toode on otsas, märgi see eemaldamiseks
             itemsToRemove.push(item.ToodeID);
           } else {
-            // Adjust quantity to available stock
+            // Sead kogus vastavaks laoseisule
             await OstukorviToode.update(
               { Kogus: availableStock },
               { where: { OstukorvID: cart.OstukorvID, ToodeID: item.ToodeID } }
@@ -166,7 +166,7 @@ exports.getCart = async (req, res) => {
       }
     }
 
-    // Remove out of stock items
+    // Eemaldame tooted, mis on otsas
     if (itemsToRemove.length > 0) {
       await OstukorviToode.destroy({
         where: { 
@@ -176,7 +176,7 @@ exports.getCart = async (req, res) => {
       });
     }
 
-    // Check if cart is now empty after removals
+    // Kontrolli, kas ostukorv on nüüd tühi
     const wasCartDeleted = await checkAndCleanupEmptyCart(cart.OstukorvID);
     if (wasCartDeleted) {
       return res.status(200).json({ 
@@ -187,7 +187,7 @@ exports.getCart = async (req, res) => {
       });
     }
 
-    // Refetch cart with updated data
+    // Küsi uuesti ostukorv koos värskendatud toodetega
     const updatedCart = await Ostukorv.findOne({
       where: {
         KasutajaID: userId,
@@ -242,7 +242,7 @@ exports.updateQuantity = async (req, res) => {
 
     if (!cartItem) return res.status(404).json({ error: 'Product not in cart.' });
 
-    // Update quantity and current price
+    // Uuenda kogus ja hind
     cartItem.Kogus = quantity;
     cartItem.Hind = parseFloat(product.Hind);
     await cartItem.save();
@@ -267,22 +267,22 @@ exports.remove = async (req, res) => {
       where: { OstukorvID: cart.OstukorvID, ToodeID: productId }
     });
 
-    if (!cartItem) return res.status(404).json({ error: 'Item not found in cart.' });
+    if (!cartItem) return res.status(404).json({ error: 'Toodet ei leitud ostukorvist' });
 
-    // Remove the item
+    // Eemalda toode ostukorvist
     await cartItem.destroy();
 
-    // Check if cart is now empty and clean up if necessary
+    // Kontrolli, kas ostukorv on nüüd tühi
     const wasCartDeleted = await checkAndCleanupEmptyCart(cart.OstukorvID);
 
     if (wasCartDeleted) {
       res.status(200).json({ 
-        message: 'Product removed from cart. Cart was empty and has been cleaned up.',
+        message: 'Toode eemaldatud ostukorvist ja ostukorv puhastatud.',
         cartDeleted: true
       });
     } else {
       res.status(200).json({ 
-        message: 'Product removed from cart.',
+        message: 'Toode eemaldatud ostukorvist.',
         cartDeleted: false
       });
     }
@@ -293,7 +293,7 @@ exports.remove = async (req, res) => {
   }
 };
 
-// FIXED: This function now properly decreases stock when order is placed
+// Eemaldab kõik tooted ostukorvist ja lõpetab tellimuse
 exports.clearUserCart = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -307,7 +307,7 @@ exports.clearUserCart = async (req, res) => {
       return res.status(200).json({ message: 'Cart is already empty.' });
     }
 
-    // Decrease stock for each item in cart
+    // Vähenda laoseisu iga toote puhul
     for (const item of cart.ostukorviTooted) {
       const product = await Toode.findByPk(item.ToodeID);
       if (product) {
@@ -316,12 +316,12 @@ exports.clearUserCart = async (req, res) => {
       }
     }
 
-    // Clear cart items
+    // Eemalda kõik tooted ostukorvist
     await OstukorviToode.destroy({
       where: { OstukorvID: cart.OstukorvID }
     });
 
-    // Update cart status to completed instead of deleting
+    // Uuenda ostukorvi staatus
     await cart.update({ Staatus: 'Completed' });
 
     res.status(200).json({ message: 'Order placed and cart cleared. Thank you!' });
@@ -334,9 +334,9 @@ exports.clearUserCart = async (req, res) => {
 
 exports.getAllCarts = async (req, res) => {
   try {
-    const { staatus } = req.query; // optional filter
+    const { staatus } = req.query; 
 
-    // Build where clause for carts
+    // Küsimus põhine tingimus
     const whereClause = {};
     if (staatus) {
       whereClause.Staatus = staatus;
@@ -351,17 +351,17 @@ exports.getAllCarts = async (req, res) => {
           include: [{ model: Toode, as: 'toode' }]
         },
         {
-          model: require('../models').Kasutaja, // User model
+          model: require('../models').Kasutaja, // Kasutaja model
           as: 'kasutaja',
           attributes: ['Nimi', 'Email', 'Telefoninumber']
         },
         {
-          model: require('../models').Tellimus, // Order model
+          model: require('../models').Tellimus, // Tellimus model
           as: 'tellimus',
           attributes: ['Asukoht']
         }
       ],
-      order: [['OstukorvID', 'DESC']] // newest first
+      order: [['OstukorvID', 'DESC']] // uuem enne
     });
 
     res.status(200).json(allCarts);
@@ -371,171 +371,171 @@ exports.getAllCarts = async (req, res) => {
   }
 };
 
-exports.updateCartStatus = async (req, res) => {
-  try {
-    const cartId = req.params.cartId;
-    const { staatus } = req.body;
+// exports.updateCartStatus = async (req, res) => {
+//   try {
+//     const cartId = req.params.cartId;
+//     const { staatus } = req.body;
 
-    const cart = await Ostukorv.findByPk(cartId);
-    if (!cart) {
-      return res.status(404).json({ error: 'Cart not found.' });
-    }
+//     const cart = await Ostukorv.findByPk(cartId);
+//     if (!cart) {
+//       return res.status(404).json({ error: 'Cart not found.' });
+//     }
 
-    cart.Staatus = staatus;
-    await cart.save();
+//     cart.Staatus = staatus;
+//     await cart.save();
 
-    res.status(200).json({ message: 'Cart status updated.', cart });
-  } catch (error) {
-    console.error('Admin updateCartStatus error:', error);
-    res.status(500).json({ error: 'Failed to update cart status.' });
-  }
-};
+//     res.status(200).json({ message: 'Cart status updated.', cart });
+//   } catch (error) {
+//     console.error('Admin updateCartStatus error:', error);
+//     res.status(500).json({ error: 'Failed to update cart status.' });
+//   }
+// };
 
-exports.assignRoles = async (req, res) => {
-  try {
-    const { cartId } = req.params;
-    const { TeenindajaID, KullerID } = req.body;
+// exports.assignRoles = async (req, res) => {
+//   try {
+//     const { cartId } = req.params;
+//     const { TeenindajaID, KullerID } = req.body;
     
-    console.log('Assigning roles to cart:', cartId, { TeenindajaID, KullerID });
+//     console.log('Assigning roles to cart:', cartId, { TeenindajaID, KullerID });
     
-    // Validate input
-    if (!TeenindajaID && !KullerID) {
-      return res.status(400).json({ error: 'At least one of TeenindajaID or KullerID must be provided' });
-    }
+//     // Valideeri sisend
+//     if (!TeenindajaID && !KullerID) {
+//       return res.status(400).json({ error: 'At least one of TeenindajaID or KullerID must be provided' });
+//     }
     
-    // Find the cart with its associated tellimus
-    const cart = await Ostukorv.findByPk(cartId, {
-      include: [{
-        model: Tellimus,
-        as: 'tellimus'
-      }]
-    });
+//     // Leia ostukorv ja seotud tellimus
+//     const cart = await Ostukorv.findByPk(cartId, {
+//       include: [{
+//         model: Tellimus,
+//         as: 'tellimus'
+//       }]
+//     });
     
-    if (!cart) {
-      return res.status(404).json({ error: 'Cart not found' });
-    }
+//     if (!cart) {
+//       return res.status(404).json({ error: 'Cart not found' });
+//     }
     
-    let tellimus = cart.tellimus;
+//     let tellimus = cart.tellimus;
     
-    // If no tellimus exists, create one
-    if (!tellimus) {
-      tellimus = await Tellimus.create({
-        KasutajaID: cart.KasutajaID,
-        OstukorvID: cart.OstukorvID,
-        Staatus: 'Pending',
-        Asukoht: 'To be determined',
-        KullerID: KullerID || null
-      });
-    } else {
-      // Update existing tellimus with KullerID if provided
-      if (KullerID !== undefined) {
-        await tellimus.update({ KullerID: KullerID || null });
-      }
-    }
+//     // Kui tellimust ei leitud, loo uus
+//     if (!tellimus) {
+//       tellimus = await Tellimus.create({
+//         KasutajaID: cart.KasutajaID,
+//         OstukorvID: cart.OstukorvID,
+//         Staatus: 'Pending',
+//         Asukoht: 'To be determined',
+//         KullerID: KullerID || null
+//       });
+//     } else {
+//       // Uuenda tellimuse KullerID, kui see on määratud
+//       if (KullerID !== undefined) {
+//         await tellimus.update({ KullerID: KullerID || null });
+//       }
+//     }
     
-    // Handle Teenindaja assignment separately using the Teenindaja model
-    if (TeenindajaID !== undefined) {
-      if (TeenindajaID) {
-        // Check if Teenindaja record exists for this tellimus
-        let teenindaja = await Teenindaja.findOne({
-          where: { TellimusID: tellimus.TellimusID }
-        });
+//     // Käsitle Teenindaja määramine
+//     if (TeenindajaID !== undefined) {
+//       if (TeenindajaID) {
+//         // Kontrolli, kas Teenindaja on juba määratud
+//         let teenindaja = await Teenindaja.findOne({
+//           where: { TellimusID: tellimus.TellimusID }
+//         });
         
-        if (teenindaja) {
-          // Update existing Teenindaja assignment if it has KullerID reference
-          if (KullerID !== undefined) {
-            await teenindaja.update({ KullerID: KullerID || null });
-          }
-        } else {
-          // Create new Teenindaja record
-          await Teenindaja.create({
-            Nimi: '', // You might want to get this from the Teenindaja master table
-            TellimusID: tellimus.TellimusID,
-            KullerID: KullerID || null
-          });
-        }
-      } else {
-        // Remove Teenindaja assignment
-        await Teenindaja.destroy({
-          where: { TellimusID: tellimus.TellimusID }
-        });
-      }
-    }
+//         if (teenindaja) {
+//           // Uuenda olemasoleva Teenindaja andmed
+//           if (KullerID !== undefined) {
+//             await teenindaja.update({ KullerID: KullerID || null });
+//           }
+//         } else {
+//           // Loo uus Teenindaja, kui seda pole veel määratud
+//           await Teenindaja.create({
+//             Nimi: '', 
+//             TellimusID: tellimus.TellimusID,
+//             KullerID: KullerID || null
+//           });
+//         }
+//       } else {
+//         // Eemalda Teenindaja, kui TeenindajaID on null
+//         await Teenindaja.destroy({
+//           where: { TellimusID: tellimus.TellimusID }
+//         });
+//       }
+//     }
     
-    // Fetch the updated cart with all related data
-    const updatedCart = await Ostukorv.findByPk(cartId, {
-      include: [{
-        model: Tellimus,
-        as: 'tellimus',
-        include: [
-          {
-            model: Kuller,
-            as: 'kuller',
-            required: false
-          }
-        ]
-      }]
-    });
+//     // Küsi uuesti ostukorv koos tellimuse ja kulleriga
+//     const updatedCart = await Ostukorv.findByPk(cartId, {
+//       include: [{
+//         model: Tellimus,
+//         as: 'tellimus',
+//         include: [
+//           {
+//             model: Kuller,
+//             as: 'kuller',
+//             required: false
+//           }
+//         ]
+//       }]
+//     });
     
-    // Also fetch assigned Teenindaja
-    let assignedTeenindaja = null;
-    if (updatedCart.tellimus) {
-      assignedTeenindaja = await Teenindaja.findOne({
-        where: { TellimusID: updatedCart.tellimus.TellimusID }
-      });
-    }
+//     // Küsi Teenindaja, kui see on määratud
+//     let assignedTeenindaja = null;
+//     if (updatedCart.tellimus) {
+//       assignedTeenindaja = await Teenindaja.findOne({
+//         where: { TellimusID: updatedCart.tellimus.TellimusID }
+//       });
+//     }
     
-    console.log('Roles assigned successfully to cart:', cartId);
-    res.json({
-      success: true,
-      message: 'Roles assigned successfully',
-      cart: updatedCart,
-      assignedTeenindaja: assignedTeenindaja
-    });
+//     console.log('Roles assigned successfully to cart:', cartId);
+//     res.json({
+//       success: true,
+//       message: 'Roles assigned successfully',
+//       cart: updatedCart,
+//       assignedTeenindaja: assignedTeenindaja
+//     });
     
-  } catch (err) {
-    console.error('Assign roles error:', err);
-    res.status(500).json({ error: err.message });
-  }
-};
+//   } catch (err) {
+//     console.error('Assign roles error:', err);
+//     res.status(500).json({ error: err.message });
+//   }
+// };
 
-exports.getCartWithAssignments = async (req, res) => {
-  try {
-    const { cartId } = req.params;
+// exports.getCartWithAssignments = async (req, res) => {
+//   try {
+//     const { cartId } = req.params;
     
-    const cart = await Ostukorv.findByPk(cartId, {
-      include: [{
-        model: Tellimus,
-        as: 'tellimus',
-        include: [
-          {
-            model: Kuller,
-            as: 'kuller',
-            required: false
-          }
-        ]
-      }]
-    });
+//     const cart = await Ostukorv.findByPk(cartId, {
+//       include: [{
+//         model: Tellimus,
+//         as: 'tellimus',
+//         include: [
+//           {
+//             model: Kuller,
+//             as: 'kuller',
+//             required: false
+//           }
+//         ]
+//       }]
+//     });
     
-    if (!cart) {
-      return res.status(404).json({ error: 'Cart not found' });
-    }
+//     if (!cart) {
+//       return res.status(404).json({ error: 'Cart not found' });
+//     }
     
-    // Get assigned Teenindaja
-    let assignedTeenindaja = null;
-    if (cart.tellimus) {
-      assignedTeenindaja = await Teenindaja.findOne({
-        where: { TellimusID: cart.tellimus.TellimusID }
-      });
-    }
+//     // Saab tellimuse Teenindaja, kui see on määratud
+//     let assignedTeenindaja = null;
+//     if (cart.tellimus) {
+//       assignedTeenindaja = await Teenindaja.findOne({
+//         where: { TellimusID: cart.tellimus.TellimusID }
+//       });
+//     }
     
-    res.json({
-      cart,
-      assignedTeenindaja
-    });
+//     res.json({
+//       cart,
+//       assignedTeenindaja
+//     });
     
-  } catch (err) {
-    console.error('Get cart error:', err);
-    res.status(500).json({ error: err.message });
-  }
-};
+//   } catch (err) {
+//     console.error('Get cart error:', err);
+//     res.status(500).json({ error: err.message });
+//   }
+// };

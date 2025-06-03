@@ -1,14 +1,14 @@
 // encrypt-passwords.js
 
 const bcrypt = require('bcrypt');
-const { Kasutaja } = require('./models'); // adjust path if needed
+const { Kasutaja } = require('./models'); 
 
 async function encryptPasswords() {
   try {
     const users = await Kasutaja.findAll();
 
     for (const user of users) {
-      // Skip if password is already hashed (bcrypt hashes always start with $2)
+      // Jäta vahele kasutajad, kelle parool on juba krüpteeritud
       if (!user.Parool.startsWith('$2')) {
         const hashedPassword = await bcrypt.hash(user.Parool, 10);
         await user.update({ Parool: hashedPassword });

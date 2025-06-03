@@ -231,7 +231,7 @@ function App() {
           element={<PrivateRoute element={<UserPage user={user} />} roles={['admin', 'user']} />}
         />
 
-        {/* Catch-all */}
+       
         <Route path="*" element={<div className="container mt-5 text-center"><h2>Page not found</h2></div>} />
       </Routes>
     </div>

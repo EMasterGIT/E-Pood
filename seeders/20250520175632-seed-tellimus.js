@@ -4,7 +4,7 @@ module.exports = {
   async up(queryInterface, Sequelize) {
     const now = new Date();
 
-    // Get the first 2 carts
+    
     const carts = await queryInterface.sequelize.query(
       `SELECT "OstukorvID", "KasutajaID"
        FROM "Ostukorv"
@@ -13,7 +13,7 @@ module.exports = {
       { type: Sequelize.QueryTypes.SELECT }
     );
 
-    // Get the first 2 kullers
+    
     const kullers = await queryInterface.sequelize.query(
       `SELECT "KullerID"
        FROM "Kuller"

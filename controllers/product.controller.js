@@ -2,10 +2,10 @@
 
 const fs = require('fs');
 const path = require('path');
-const { Op } = require('sequelize'); // Keep Op for operators like Op.like
-const db = require('../models'); // Import the db object which contains models and the sequelize instance
-const { Toode } = db; // Destructure Toode model from db
-const sequelize = db.sequelize; // <--- Import the sequelize instance
+const { Op } = require('sequelize'); 
+const db = require('../models'); 
+const { Toode } = db; 
+const sequelize = db.sequelize; 
 
 exports.getAllProducts = async (req, res) => {
   try {
@@ -26,7 +26,7 @@ exports.getAllProducts = async (req, res) => {
       j.PiltUrl = j.PiltURL
         ? `${req.protocol}://${req.get('host')}/${j.PiltURL}`
         : null;
-      return j; // Keep PiltURL for editing purposes
+      return j; // PiltUrl tagastatakse objekti sees
     });
 
     return res.json(withUrl);
@@ -44,7 +44,7 @@ exports.addProduct = async (req, res) => {
 
     if (!Nimi || !Kategooria || !Hind || !Laoseis) {
       return res.status(400).json({
-        error: 'Fields Nimi, Kategooria, Hind and Laoseis are all required.'
+        error: 'Väljad Nimi, Kategooria, Hind and Laoseis on nõutud.'
       });
     }
 
@@ -77,13 +77,13 @@ exports.updateProduct = async (req, res) => {
     console.log('Request body:', req.body);
     console.log('Uploaded file:', req.file);
 
-    // Use consistent field names - expecting frontend to send DB field names
+    
     const { Nimi, Kategooria, Hind, Laoseis, Kirjeldus } = req.body;
     if (!Nimi || !Kategooria || !Hind || !Laoseis) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Prepare update data with DB columns
+    // Uuenda toote andmeid
     const updateData = {
       Nimi,
       Kategooria,
@@ -92,9 +92,9 @@ exports.updateProduct = async (req, res) => {
       Kirjeldus: Kirjeldus || ''
     };
 
-    // Handle image update
+    // Käsitle pildi uuendamist
     if (req.file) {
-      // Delete old image if exists
+      // Kustuta vana pilt, kui see on olemas
       const oldProduct = await Toode.findOne({ where: { ToodeID: productId } });
       if (oldProduct && oldProduct.PiltURL) {
         const imagePath = path.join(__dirname, '..', oldProduct.PiltURL);
@@ -120,20 +120,20 @@ exports.updateProduct = async (req, res) => {
       };
       return res.json(productWithUrl);
     } else {
-      return res.status(404).json({ error: 'Product not found' });
+      return res.status(404).json({ error: 'Toodet ei leitud' });
     }
   } catch (error) {
     console.error('Update error:', error);
-    return res.status(400).json({ error: 'Could not update product' });
+    return res.status(400).json({ error: 'Ei saanud toodet uuendada' });
   }
 };
 
 exports.deleteProduct = async (req, res) => {
   try {
     const productId = req.params.id;
-    console.log('Delete request received for ID:', productId);
+    
 
-    // Find product by ToodeID
+    // Leia toode andmebaasist
     const product = await Toode.findOne({ where: { ToodeID: productId } });
     console.log('Found product:', product);
 
@@ -141,7 +141,7 @@ exports.deleteProduct = async (req, res) => {
       return res.status(404).json({ error: 'Product not found' });
     }
 
-    // Delete associated image if exists
+    // Kustuta seotud pilt, kui see on olemas
     if (product.PiltURL) {
       const imagePath = path.join(__dirname, '..', product.PiltURL);
       console.log('Trying to delete image at:', imagePath);
@@ -155,7 +155,7 @@ exports.deleteProduct = async (req, res) => {
       }
     }
 
-    // Delete product from DB
+    // Kustuta toode andmebaasist
     const deleted = await Toode.destroy({
       where: { ToodeID: productId }
     });
@@ -175,7 +175,7 @@ exports.deleteProduct = async (req, res) => {
 
 exports.getCategories = async (req, res) => {
   try {
-    // Fetch distinct categories (Kategooria)
+    // Küsi kõik unikaalsed kategooriad Toode mudelist
     const categories = await Toode.findAll({
       attributes: [
         [sequelize.fn('DISTINCT', sequelize.col('Kategooria')), 'Kategooria']
@@ -183,7 +183,7 @@ exports.getCategories = async (req, res) => {
       order: [['Kategooria', 'ASC']]
     });
 
-    // Map to plain array of strings
+    // Map kategooriad lihtsaks massiiviks
     const categoryList = categories.map(cat => cat.Kategooria);
 
     res.json(categoryList);

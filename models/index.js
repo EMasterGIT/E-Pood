@@ -48,11 +48,11 @@ Object.keys(db).forEach(modelName => {
   if (db[modelName].associate) {
     console.log(`[DEBUG] Associating model: ${modelName}`);
     try {
-      db[modelName].associate(db); // Pass the full db object for associations
+      db[modelName].associate(db); // Kutsu esituse meetod, kui see on olemas
       console.log(`[DEBUG] Associated ${modelName} successfully.`);
     } catch (error) {
       console.error(`[ERROR] Failed to associate model ${modelName}. Error:`, error.message);
-      // If this happens, it's usually the "not a subclass" error
+      
     }
   }
 });

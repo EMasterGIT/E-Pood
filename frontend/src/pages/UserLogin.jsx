@@ -49,6 +49,7 @@ export default function UserLogin({ setUser }) {
       };
 
       localStorage.setItem('token', token);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       localStorage.setItem('user', JSON.stringify(loggedInUser));
 
       setUser(loggedInUser);
@@ -59,7 +60,7 @@ export default function UserLogin({ setUser }) {
       if (err.response && err.response.data && err.response.data.error) {
         setError(err.response.data.error);
       } else {
-        setError('Login failed. Please check your credentials or try again.');
+        setError('Sisselogimine nurjus. Palun proovi uuesti.');
       }
     } finally {
       setIsLoading(false);
@@ -74,8 +75,8 @@ export default function UserLogin({ setUser }) {
             <div className="card shadow-lg border-0">
               <div className="card-body p-5">
                 <div className="text-center mb-4">
-                  <h2 className="card-title text-center mb-2">User Login</h2>
-                  <p className="text-muted">Sign in to your account</p>
+                  <h2 className="card-title text-center mb-2">Sisselogimine</h2>
+                  <p className="text-muted">Logi enda kontosse sisse</p>
                 </div>
 
                 {error && (
@@ -92,12 +93,12 @@ export default function UserLogin({ setUser }) {
 
                 <form onSubmit={handleLogin}>
                   <div className="mb-3">
-                    <label htmlFor="emailInput" className="form-label">Email or Username</label>
+                    <label htmlFor="emailInput" className="form-label">Email või Kasutajanimi</label>
                     <input
                       type="text"
                       className="form-control form-control-lg"
                       id="emailInput"
-                      placeholder="Enter your email or username"
+                      placeholder="Email või kasutajanimi"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
@@ -105,12 +106,12 @@ export default function UserLogin({ setUser }) {
                     />
                   </div>
                   <div className="mb-4">
-                    <label htmlFor="passwordInput" className="form-label">Password</label>
+                    <label htmlFor="passwordInput" className="form-label">Parool</label>
                     <input
                       type="password"
                       className="form-control form-control-lg"
                       id="passwordInput"
-                      placeholder="Enter your password"
+                      placeholder="Sisesta oma parool"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
@@ -126,7 +127,7 @@ export default function UserLogin({ setUser }) {
                       {isLoading ? (
                         <>
                           <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                          Logging in...
+                          Sisselogimine...
                         </>
                       ) : (
                         'Logi sisse'
@@ -143,7 +144,7 @@ export default function UserLogin({ setUser }) {
                       className="btn btn-link mt-2"
                       onClick={() => navigate('/store')}
                     >
-                      Continue to Store
+                      Edasi poodi
                     </button>
                   </div>
                 </form>

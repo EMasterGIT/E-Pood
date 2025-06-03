@@ -24,10 +24,10 @@ module.exports = {
         updatedAt: now
       }
     ], {
-      returning: true // This is critical for PostgreSQL to get the inserted rows
+      returning: true 
     });
 
-    // Optional: Log to verify what's inserted
+    
     console.log('Seeded Ostukorv carts:', carts);
   },
 

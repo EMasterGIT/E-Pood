@@ -13,8 +13,8 @@ module.exports = (sequelize) => {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: 'Kasutaja', // <-- CORRECTED: PascalCase 'Kasutaja'
-        key: 'KasutajaID',  // Make sure 'KasutajaID' is the actual primary key in your Kasutaja model
+        model: 'Kasutaja', 
+        key: 'KasutajaID',  
       },
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE'
@@ -26,24 +26,24 @@ module.exports = (sequelize) => {
     }
   }, {
     sequelize,
-    modelName: 'Ostukorv', // Correct (PascalCase)
-    tableName: 'Ostukorv', // Correct
-    freezeTableName: true, // Correct
+    modelName: 'Ostukorv', 
+    tableName: 'Ostukorv', 
+    freezeTableName: true, 
     timestamps: true
   });
 
   Ostukorv.associate = (models) => {
-    Ostukorv.belongsTo(models.Kasutaja, { // This already correctly references models.Kasutaja (PascalCase)
+    Ostukorv.belongsTo(models.Kasutaja, { 
       foreignKey: 'KasutajaID',
       as: 'kasutaja',
     });
 
-    Ostukorv.hasMany(models.OstukorviToode, { // This already correctly references models.OstukorviToode (PascalCase)
+    Ostukorv.hasMany(models.OstukorviToode, { 
       foreignKey: 'OstukorvID',
       as: 'ostukorviTooted',
     });
 
-    Ostukorv.hasOne(models.Tellimus, { // This already correctly references models.Tellimus (PascalCase)
+    Ostukorv.hasOne(models.Tellimus, { 
       foreignKey: 'OstukorvID',
       as: 'tellimus',
     });

@@ -9,7 +9,7 @@ module.exports = {
         Nimi: 'User One',
         Email: 'user1@example.com',
         Telefoninumber: '1234567890',
-        Parool: '123', // make sure to hash passwords properly
+        Parool: '123', 
         Roll: 'user',
         createdAt: now,
         updatedAt: now

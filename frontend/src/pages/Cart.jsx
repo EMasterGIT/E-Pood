@@ -73,7 +73,7 @@ export default function Cart({ user }) {
   function updateCartCount(cart) {
     if (!cart || !cart.ostukorviTooted) return;
     const uniqueProductCount = cart.ostukorviTooted.length;
-    console.log('Cart product count:', uniqueProductCount);
+    console.log('Tooteid ostukorvis:', uniqueProductCount);
   }
 
   const removeItemFromCart = async (productId) => {
@@ -129,7 +129,7 @@ export default function Cart({ user }) {
       
       // Sea tellimuse olek edukaks
       setOrderPlaced(true);
-      alert('Tellimus edukalt esitatud!');
+     
       
       // Puhasta ostukorv ja uuenda olekuid
       setCartItems([]);

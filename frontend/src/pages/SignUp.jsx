@@ -5,14 +5,14 @@ import { useNavigate } from 'react-router-dom';
 
 export default function SignUp({ setUser }) {
   const [email, setEmail] = useState('');
-  const [name, setName] = useState(''); // <--- NEW STATE FOR NAME
+  const [name, setName] = useState(''); 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Optional: Redirect already logged-in users if they try to access signup
+  
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
@@ -34,30 +34,30 @@ export default function SignUp({ setUser }) {
     setIsLoading(true);
     setError('');
 
-    // --- Basic Client-Side Validation ---
+    
     if (password !== confirmPassword) {
-      setError('Passwords do not match.');
+      setError('Paroolid ei ole samad.');
       setIsLoading(false);
       return;
     }
     if (password.length < 6) {
-        setError('Password must be at least 6 characters long.');
+        setError('Parool peab olema vähemalt 6 tähemärki pikk.');
         setIsLoading(false);
         return;
     }
-    if (!name.trim()) { // Basic check for name
+    if (!name.trim()) { // Kontrolli, kas nimi on sisestatud
         setError('Name is required.');
         setIsLoading(false);
         return;
     }
-    // Add more validation (e.g., email format) if needed
+    
 
     try {
       const response = await axios.post('http://localhost:3001/api/auth/register', {
-        Nimi: name,       // <--- SENDING NAME FIELD
+        Nimi: name,       
         Email: email,
         Parool: password,
-        Roll: 'user'      // <--- SENDING DEFAULT ROLE FOR NEW USERS
+        Roll: 'user'      
       });
 
       const { token, user: userData } = response.data;
@@ -76,11 +76,11 @@ export default function SignUp({ setUser }) {
       navigate('/store');
 
     } catch (err) {
-      console.error('User registration failed:', err);
+      console.error('Kasutaja registreerimine nurjus:', err);
       if (err.response && err.response.data && err.response.data.error) {
         setError(err.response.data.error);
       } else {
-        setError('Registration failed. Please try again.');
+        setError('Registreerimine nurjus. Palun proovi hiljem uuesti.');
       }
     } finally {
       setIsLoading(false);
@@ -96,7 +96,7 @@ export default function SignUp({ setUser }) {
               <div className="card-body p-5">
                 <div className="text-center mb-4">
                   <h2 className="card-title text-center mb-2">Sign Up</h2>
-                  <p className="text-muted">Create your account</p>
+                  <p className="text-muted">Loo kasutaja</p>
                 </div>
 
                 {error && (
@@ -113,12 +113,12 @@ export default function SignUp({ setUser }) {
 
                 <form onSubmit={handleSignUp}>
                   <div className="mb-3">
-                    <label htmlFor="nameInput" className="form-label">Name</label> {/* <--- NEW INPUT FIELD */}
+                    <label htmlFor="nameInput" className="form-label">Nimi</label> 
                     <input
                       type="text"
                       className="form-control form-control-lg"
                       id="nameInput"
-                      placeholder="Enter your name"
+                      placeholder="Sisesta oma nimi"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       required
@@ -131,7 +131,7 @@ export default function SignUp({ setUser }) {
                       type="email"
                       className="form-control form-control-lg"
                       id="emailInput"
-                      placeholder="Enter your email"
+                      placeholder="Sisesta oma e-mail"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
@@ -139,12 +139,12 @@ export default function SignUp({ setUser }) {
                     />
                   </div>
                   <div className="mb-3">
-                    <label htmlFor="passwordInput" className="form-label">Password</label>
+                    <label htmlFor="passwordInput" className="form-label">Parool</label>
                     <input
                       type="password"
                       className="form-control form-control-lg"
                       id="passwordInput"
-                      placeholder="Enter your password"
+                      placeholder="Sisesta oma parool"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
@@ -152,12 +152,12 @@ export default function SignUp({ setUser }) {
                     />
                   </div>
                   <div className="mb-4">
-                    <label htmlFor="confirmPasswordInput" className="form-label">Confirm Password</label>
+                    <label htmlFor="confirmPasswordInput" className="form-label">Kinnita parool</label>
                     <input
                       type="password"
                       className="form-control form-control-lg"
                       id="confirmPasswordInput"
-                      placeholder="Confirm your password"
+                      placeholder="Kinnita oma parool"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       required
@@ -173,7 +173,7 @@ export default function SignUp({ setUser }) {
                       {isLoading ? (
                         <>
                           <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                          Signing Up...
+                          Registreerin...
                         </>
                       ) : (
                         'Sign Up'
@@ -182,14 +182,14 @@ export default function SignUp({ setUser }) {
                   </div>
                   <div className="text-center mt-4">
                     <p className="text-muted mb-1">
-                      Already have an account? <a href="/user-login">Login</a>
+                      On juba kasutaja? <a href="/user-login">Logi sisse</a>
                     </p>
                     <button
                       type="button"
                       className="btn btn-link mt-2"
                       onClick={() => navigate('/store')}
                     >
-                      Continue to Store
+                      Edasi Poodi
                     </button>
                   </div>
                 </form>

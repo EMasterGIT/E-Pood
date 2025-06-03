@@ -4,9 +4,7 @@ const { Model, DataTypes } = require('sequelize');
 module.exports = (sequelize) => {
   class Toode extends Model {
     static associate(models) {
-      // Define associations for Toode here if it has any, e.g.:
-      // Toode.hasMany(models.OstukorviToode, { foreignKey: 'ToodeID' });
-      // Toode.hasMany(models.TellimuseToode, { foreignKey: 'ToodeID' }); // If you have a join table
+  
     }
   }
 
@@ -41,15 +39,15 @@ module.exports = (sequelize) => {
         defaultValue: 0
       },
       PiltURL: {
-        type: DataTypes.STRING // URL to product image
+        type: DataTypes.STRING 
       }
     },
     {
       sequelize,
-      modelName: 'Toode',       // <-- MUST be PascalCase 'Toode'
-      tableName: 'Toode',       // <-- Recommended: PascalCase 'Toode'
-      freezeTableName: true,    // <-- IMPORTANT: Ensures tableName is used exactly
-      timestamps: true          // Or false, depending on your needs
+      modelName: 'Toode',       
+      tableName: 'Toode',       
+      freezeTableName: true,    
+      timestamps: true          
     }
   );
 

@@ -5,14 +5,11 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class Tellimus extends Model {
     static associate(models) {
-      // Define associations here.
+      
       Tellimus.belongsTo(models.Kasutaja, { foreignKey: 'KasutajaID', as: 'kasutaja' });
       Tellimus.belongsTo(models.Ostukorv, { foreignKey: 'OstukorvID', as: 'ostukorv' });
       Tellimus.belongsTo(models.Kuller, { foreignKey: 'KullerID', as: 'kuller' });
-      // Tellimus.belongsTo(models.Kuller, { foreignKey: 'KullerID', as: 'kuller' }); // Re-enable if you have a Kuller model
-
-      // REMOVED: Tellimus.hasMany(models.TellimuseToode, ...)
-      // We will access order items through the associated Ostukorv model instead.
+    
     }
   }
 

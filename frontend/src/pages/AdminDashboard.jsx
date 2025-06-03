@@ -69,7 +69,7 @@ function AdminDashboard() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
-      // Update the tellimus in the frontend state
+      // Uuenda tellimuse olekut olekus
       setTellimused(prev =>
         prev.map(t => (t.TellimusID === tellimusId ? { ...t, Staatus: newStatus } : t))
       );
@@ -91,7 +91,7 @@ function AdminDashboard() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
-      // Remove the tellimus from frontend state
+      // Eemalda tellimus olekust
       setTellimused(prev => prev.filter(t => t.TellimusID !== tellimusId));
       setStatusError('');
     } catch (err) {

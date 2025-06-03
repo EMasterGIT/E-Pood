@@ -2,7 +2,7 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    // Create the OstukorviToode table
+    
     await queryInterface.createTable('ostukorviToode', {
       OstukorviToodeID: {
         allowNull: false,
@@ -10,33 +10,33 @@ module.exports = {
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      OstukorvID: { // Foreign Key to the new Ostukorv (header) table
+      OstukorvID: { 
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
-          model: 'ostukorv', // Make sure your Ostukorv header table is named 'Ostukorv'
+          model: 'ostukorv', 
           key: 'OstukorvID'
         },
         onUpdate: 'CASCADE',
-        onDelete: 'CASCADE' // Or 'SET NULL' if you prefer
+        onDelete: 'CASCADE' 
       },
       ToodeID: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
-          model: 'toode', // Assuming your product table is named 'toode'
-          key: 'ToodeID' // Assuming your product ID column is named 'ToodeID'
+          model: 'toode', 
+          key: 'ToodeID'
         },
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE'
       },
-      Kogus: { // Quantity of this product in the cart
+      Kogus: { 
         type: Sequelize.INTEGER,
         allowNull: false,
-        defaultValue: 1 // Default quantity when added
+        defaultValue: 1 
       },
-      Hind: { // Price of the product when it was added to the cart
-        type: Sequelize.DECIMAL(10, 2), // Adjust precision and scale as needed (e.g., 10 total digits, 2 after decimal)
+      Hind: { 
+        type: Sequelize.DECIMAL(10, 2),
         allowNull: false
       },
       createdAt: {
@@ -51,7 +51,7 @@ module.exports = {
   },
 
   down: async (queryInterface, Sequelize) => {
-    // Drop the OstukorviToode table if rolling back
+    
     await queryInterface.dropTable('ostukorviToode');
   }
 };
