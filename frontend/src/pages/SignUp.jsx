@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 export default function SignUp({ setUser }) {
   const [email, setEmail] = useState('');
   const [name, setName] = useState(''); 
+  const [phoneNumber, setPhoneNumber] = useState(''); 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
@@ -45,8 +46,20 @@ export default function SignUp({ setUser }) {
         setIsLoading(false);
         return;
     }
-    if (!name.trim()) { // Kontrolli, kas nimi on sisestatud
-        setError('Name is required.');
+    if (!name.trim()) {
+        setError('Nimi on nõutud.');
+        setIsLoading(false);
+        return;
+    }
+    if (!phoneNumber.trim()) {
+        setError('Telefoninumber on nõutud.');
+        setIsLoading(false);
+        return;
+    }
+    // Telefoninumber
+    const phoneRegex = /^(\+372|372|5\d{7}|\d{7,8})$/;
+    if (!phoneRegex.test(phoneNumber.replace(/\s/g, ''))) {
+        setError('Palun sisesta kehtiv telefoninumber.');
         setIsLoading(false);
         return;
     }
@@ -56,6 +69,7 @@ export default function SignUp({ setUser }) {
       const response = await axios.post('http://localhost:3001/api/auth/register', {
         Nimi: name,       
         Email: email,
+        Telefoninumber: phoneNumber, 
         Parool: password,
         Roll: 'user'      
       });
@@ -66,6 +80,7 @@ export default function SignUp({ setUser }) {
         id: userData.id,
         email: userData.email || userData.Email,
         name: userData.name || userData.Nimi,
+        phoneNumber: userData.phoneNumber || userData.Telefoninumber,
         role: userData.roll || 'user',
       };
       console.log('Axios Full Response:', response);
@@ -95,8 +110,8 @@ export default function SignUp({ setUser }) {
             <div className="card shadow-lg border-0">
               <div className="card-body p-5">
                 <div className="text-center mb-4">
-                  <h2 className="card-title text-center mb-2">Sign Up</h2>
-                  <p className="text-muted">Loo kasutaja</p>
+                  <h2 className="card-title text-center mb-2">Loo kasutaja</h2>
+                  
                 </div>
 
                 {error && (
@@ -138,6 +153,21 @@ export default function SignUp({ setUser }) {
                       disabled={isLoading}
                     />
                   </div>
+                  {/* Telefoninumber */}
+                  <div className="mb-3">
+                    <label htmlFor="phoneInput" className="form-label">Telefoninumber</label>
+                    <input
+                      type="tel"
+                      className="form-control form-control-lg"
+                      id="phoneInput"
+                      placeholder="Telefon"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      required
+                      disabled={isLoading}
+                    />
+                    
+                  </div>
                   <div className="mb-3">
                     <label htmlFor="passwordInput" className="form-label">Parool</label>
                     <input
@@ -176,7 +206,7 @@ export default function SignUp({ setUser }) {
                           Registreerin...
                         </>
                       ) : (
-                        'Sign Up'
+                        'Registreeri'
                       )}
                     </button>
                   </div>

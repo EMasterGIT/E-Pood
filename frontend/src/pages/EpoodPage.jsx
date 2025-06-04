@@ -63,18 +63,35 @@ const EpoodPage = ({ loadCart }) => {
       filtered = filtered.filter(p => p.Kategooria === selectedCategory);
     }
     
-    // Filtreeri välja tooted, mille laoseis on 0 või vähem
+    // Filter out products with 0 or less stock
     filtered = filtered.filter(p => (p.Laoseis || 0) > 0);
     
+    // Fixed sorting logic
     filtered.sort((a, b) => {
-      const valA = a[sortBy];
-      const valB = b[sortBy];
-      if (typeof valA === 'string') {
+      let valA, valB;
+      
+      // Map 'Kogus' to 'Laoseis' since that's your actual field name
+      if (sortBy === 'Kogus') {
+        valA = a.Laoseis || 0;
+        valB = b.Laoseis || 0;
+      } else {
+        valA = a[sortBy];
+        valB = b[sortBy];
+      }
+      
+      // Handle string comparison
+      if (typeof valA === 'string' && typeof valB === 'string') {
         return sortOrder === 'ASC'
           ? valA.localeCompare(valB)
           : valB.localeCompare(valA);
       }
-      return sortOrder === 'ASC' ? valA - valB : valB - valA;
+      
+      // Handle number comparison
+      // Convert to numbers to ensure proper numeric sorting
+      const numA = Number(valA) || 0;
+      const numB = Number(valB) || 0;
+      
+      return sortOrder === 'ASC' ? numA - numB : numB - numA;
     });
     
     setProducts(filtered);
@@ -212,6 +229,7 @@ const EpoodPage = ({ loadCart }) => {
               <option value="Nimi_DESC">Nimi Z-A</option>
               <option value="Hind_ASC">Hind: odavam enne</option>
               <option value="Hind_DESC">Hind: kallim enne</option>
+              <option value="Kogus_ASC">Kogus (vähem enne)</option>
               <option value="Kogus_DESC">Kogus: rohkem enne</option>
             </select>
           </div>

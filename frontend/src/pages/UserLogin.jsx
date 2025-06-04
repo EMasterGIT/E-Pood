@@ -136,7 +136,7 @@ export default function UserLogin({ setUser }) {
                   </div>
                   <div className="text-center mt-4">
                     <p className="text-muted mb-1">
-                      Don't have an account? <a href="/register">Sign Up</a>
+                      Pole kontot? <a href="/register">Liitu</a>
                     </p>
                     
                     <button

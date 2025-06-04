@@ -139,22 +139,32 @@ export default function Favorites() {
                   />
                 </button>
 
-                <div className="d-flex justify-content-center align-items-center bg-light">
-                <img
-                    src={
-                      product.PiltUrl && product.PiltUrl.trim()
-                        ? product.PiltUrl
-                        : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PGNpcmNsZSBjeD0iNTAiIGN5PSI2MCIgcj0iMTAiIGZpbGw9IiNjY2MiLz48cGF0aCBkPSJNMzAgMTQwaDE0MGwtMzAtNDBMMTIwIDEyMGwtMjAgMjB6IiBmaWxsPSIjY2NjIi8+PC9zdmc+'
-                    }
-                    
-                    alt={
-                      product.PiltUrl && product.PiltUrl.trim()
-                        ? (product.Nimi || 'Toode')
-                        : 'Pilt' 
-                    }
-                    
-                  />
-                </div>
+                <div 
+                          className="d-flex justify-content-center align-items-center bg-light overflow-hidden"
+                          style={{ height: '200px' }}
+                        >
+                          <img
+                            src={
+                              product.PiltUrl && product.PiltUrl.trim()
+                                ? product.PiltUrl
+                                : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PGNpcmNsZSBjeD0iNTAiIGN5PSI2MCIgcj0iMTAiIGZpbGw9IiNjY2MiLz48cGF0aCBkPSJNMzAgMTQwaDE0MGwtMzAtNDBMMTIwIDEyMGwtMjAgMjB6IiBmaWxsPSIjY2NjIi8+PC9zdmc+'
+                            }
+                            alt={
+                              product.PiltUrl && product.PiltUrl.trim()
+                                ? (product.Nimi || 'Toode')
+                                : 'Pilt' 
+                            }
+                            className="img-fluid"
+                            style={{ 
+                              maxHeight: '100%', 
+                              maxWidth: '100%', 
+                              objectFit: 'contain',
+                              objectPosition: 'center'
+                            }}
+                          />
+                        </div>
+
+
 
                 <div className="card-body d-flex flex-column">
                   <span className="badge bg-secondary mb-2 align-self-start">
