@@ -81,5 +81,5 @@ See projekt on täislahenduslik e-pood, mis võimaldab kasutajatel registreeruda
 6. Käivitamiseks frontend:
    ```bash
    cd frontend
-   npm start
+   npm run dev
 
