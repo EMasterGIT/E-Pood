@@ -1,4 +1,4 @@
-# 🛒 Rimi E-pood – Täislahendus
+# 🛒 Rimi E-pood – Täislahendus - Kooli Projekt
 
 See projekt on täislahenduslik e-pood, mis võimaldab kasutajatel registreeruda, sisse logida, sirvida tooteid, lisada neid ostukorvi, teha tellimusi ning administraatoritel hallata kogu süsteemi. Süsteem on loodud **Node.js + Express + PostgreSQL (Sequelize ORM)** backendiga ja **React + Bootstrap** frontendiga.
 
