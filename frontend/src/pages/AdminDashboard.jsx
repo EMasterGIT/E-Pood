@@ -130,7 +130,7 @@ function AdminDashboard() {
     formData.append('Kategooria', newProduct.Kategooria);
     formData.append('Laoseis', parseInt(newProduct.Laoseis, 10));
     if (newProductImage) {
-      formData.append('image', newProductImage);
+      formData.append('Pilt', newProductImage);
     }
 
     try {
@@ -162,7 +162,7 @@ function AdminDashboard() {
     formData.append('Kategooria', editedProduct.Kategooria);
     formData.append('Laoseis', parseInt(editedProduct.Laoseis, 10));
     if (editProductImage) {
-      formData.append('image', editProductImage);
+      formData.append('Pilt', editProductImage);
     }
 
     try {
