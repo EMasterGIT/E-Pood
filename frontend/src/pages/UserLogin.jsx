@@ -45,7 +45,8 @@ export default function UserLogin({ setUser }) {
         id: userData.id,
         email: userData.email || userData.Email,
         name: userData.name || userData.Nimi,
-        role: userData.roll || 'user'
+        role: userData.roll || 'user',
+        phone: userData.phone || userData.Telefoninumber || '', 
       };
 
       localStorage.setItem('token', token);

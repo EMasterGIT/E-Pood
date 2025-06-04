@@ -34,10 +34,10 @@ const authController = require('../controllers/auth.controller');
  *     UserLogin:
  *       type: object
  *       required:
- *         - Email
+ *         - EmailOrName
  *         - Parool
  *       properties:
- *         Email:
+ *         EmailOrName:
  *           type: string
  *         Parool:
  *           type: string

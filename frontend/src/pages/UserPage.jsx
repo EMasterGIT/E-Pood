@@ -19,6 +19,7 @@ function UserPage({ user }) {
     if (user) fetchUserCarts();
   }, [user]);
 
+
   const activeCarts = carts.filter(c => c.Staatus === 'Aktiivne');
   const orderedCarts = carts.filter(c => c.Staatus === 'Kinnitatud');
 
@@ -26,7 +27,7 @@ function UserPage({ user }) {
     <div className="container mt-4">
       <h2>{user?.name || user?.email} - Konto info</h2>
       <p><strong>Email:</strong> {user.email}</p>
-      <p><strong>Role:</strong> {user.role}</p>
+      <p><strong>Telefon:</strong> {user.phone}</p>
 
       <hr />
       <h4>Aktivsed Ostukorvid</h4>
