@@ -1,4 +1,4 @@
-# 🛒 Rimi E-pood – Täislahendus - Kooli Projekt
+# 🛒 E-pood – Täislahendus - Kooli Projekt
 
 See projekt on täislahenduslik e-pood, mis võimaldab kasutajatel registreeruda, sisse logida, sirvida tooteid, lisada neid ostukorvi, teha tellimusi ning administraatoritel hallata kogu süsteemi. Süsteem on loodud **Node.js + Express + PostgreSQL (Sequelize ORM)** backendiga ja **React + Bootstrap** frontendiga.
 
@@ -52,10 +52,10 @@ See projekt on täislahenduslik e-pood, mis võimaldab kasutajatel registreeruda
 1. Kloonige projekt oma masinasse:
 
    ```bash
-   git clone https-link https://github.com/EMasterGIT/RimiEpood.git
+   git clone https-link https://github.com/EMasterGIT/E-pood.git
 2. Liikuge projekti kausta:
    ```bash
-   cd RimiEpood
+   cd E-pood
 3. Installige vajalikud sõltuvused:
    ```bash
    npm install
